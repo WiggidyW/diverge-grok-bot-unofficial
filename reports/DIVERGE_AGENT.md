@@ -42,7 +42,7 @@ Every request is `POST` with `Content-Type: application/json`.
 
 | # | Endpoint | Request body | Success | Failure |
 |---|---|---|---|---|
-| 1 | `POST /register` | `{ "arguments": <any JSON>, "template": "<sha256 hex>" }` | `2xx` + register response JSON | any non-`2xx`; second call → `409 {"kind":"registered"}` |
+| 1 | `POST /register` | `{ "arguments": <any JSON>, "template": "<sha256 hex>", "image": { "digest", "references"? } }` | `2xx` + register response JSON | any non-`2xx`; second call → `409 {"kind":"registered"}` |
 | 2 | `POST /secrets` | `{ "<name>": <value>, … }` | `2xx` once the values are applied (the body is not read) | non-`2xx` |
 | 3 | `POST /secrets/collect` | `{ "names": ["<name>", …] }` | `2xx` + `{ "<name>": <value>, … }` with **every** name | non-`2xx` |
 | 4 | `POST /run` | `Item`: chat or structured decision | `2xx` `text/event-stream` of `AgenticLoopChunk` | non-`2xx`; before register → `{"kind":"unregistered"}` |
@@ -55,12 +55,17 @@ The proxy calls this once, before anything else, when the container begins.
 ```json
 {
   "arguments": { "...": "whatever the image's /.diverge/DIVERGE.md says it takes" },
-  "template":  "3f9a…(64 lowercase hex chars: the agent template's id)"
+  "template":  "3f9a…(64 lowercase hex chars: the agent template's id)",
+  "image": {
+    "digest": "sha256:4b825dc642cb6eb9a060e54bf8d69288fbee4904b825dc642cb6eb9a060e54bf",
+    "references": [ { "registry": "ghcr.io", "name": "divergenetwork/some-agent" } ]
+  }
 }
 ```
 
 - `arguments` is opaque JSON. The image defines it, and documents it in its own `/.diverge/DIVERGE.md`, which the proxy reads from the image. The program is never asked to describe its arguments.
-- The arguments are **fixed for the container's life**. Every loop runs as the agent built from them.
+- `image` is the image this container runs: its manifest `digest` (`<algorithm>:<hex>`) and `references`, the registries and paths it can be pulled from. `references` is omitted when empty. The **provider** supplies it, copying the `image` of the run request it deployed the container from; the daemon sends nothing extra.
+- The arguments, the template and the image are **fixed for the container's life**. Every loop runs as the agent built from them.
 - A non-`2xx` means the image refuses the arguments, in its own words. The proxy treats an unreachable server, or a `2xx` whose body doesn't parse, the same way.
 - A second `/register` gets `409 {"kind":"registered"}`, whatever it carries.
 
