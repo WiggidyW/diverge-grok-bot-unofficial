@@ -15,6 +15,8 @@ A survey of Grok Bot's features as its own site describes them, read on 2026-11-
 - Ten role guides (marketing, Linear, founder-led sales, performance marketing, post-sales, Clay, recruiting, SDRs, legal ops, GTM, PMs) were not fetched.
 - `docs.x.ai` was not fetched; no Grok Bot page there is linked from the pages above.
 
+> **Correction, 2026-11-24.** This report was written from the marketing pages before the product docs at `https://docs.x.ai/grok-bot/` were found. The docs contradict it on these points: desktop clients exist for Windows and Linux; an Android app exists; Bots have voice chat and voice memos; a Bot can have its own email address; a routine can be started by an HTTP webhook; Bots can be reached in X Chat and by tagging `@bot` on X; all of a user's Bots share one cloud computer. See `GROK_BOT_INTERACTION.md`, which is written from the docs. Sections 2 and 14 below are the ones affected.
+
 Everything below is what those pages state. Where a claim comes from a guide author's own setup rather than a product statement, it is marked "(author's setup)".
 
 ---
