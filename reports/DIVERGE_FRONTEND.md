@@ -25,8 +25,8 @@ from community projects, as the other reports record.
   finish matter once it works.
 - **Diverge is missing conveniences, not essentials.** The frame is
   allowed to write the clipboard and nothing else. Pasting, full screen,
-  the microphone and opening links on the person's own machine would each
-  need a small addition.
+  and the microphone would each need a small addition. Opening links on
+  the person's own machine is already supported.
 - **This is also the cleanest arrangement on the terms.** A person
   operating the real app, through a picture of it, is a person using the
   app.
@@ -303,10 +303,21 @@ The app has voice chat and dictation.
 ### Links
 
 - A link the app opens goes to the browser inside the container.
-- **Diverge:** optional. A message from the frame asking the viewer to
-  open an address on the person's own machine would make links behave as
-  people expect. The viewer already listens for one kind of message from
-  the frame, for the theme.
+- **The viewer already opens links on the person's own machine.** A
+  link with a target, or `window.open`, from a frontend's frame opens in
+  the person's own browser when it is `http` or `https`, and opens
+  nothing otherwise (`diverge-viewer/src-tauri/src/main.rs`,
+  `on_new_window`).
+- **So the work is ours, inside the container.** The container's default
+  browser is replaced by a small script that hands the address to our
+  program; our program sends it to the page over the WebSocket; the page
+  calls `window.open`.
+- **Sign-in is the exception.** That page has to open inside the
+  container, or the `grokbot://` link that ends it is handed to the
+  wrong machine.
+- **Not tested:** whether the webview lets a page open a window when no
+  click in the page caused it.
+- **Diverge:** nothing needed.
 
 ### Notifications
 
@@ -342,7 +353,6 @@ None of these is required for the frontend to work.
 | `fullscreen` on the frame | True full screen | The sheet's fill-the-window control |
 | `microphone` on the frame | Voice chat, dictation | No voice input |
 | `autoplay` on the frame | Sound without a click first | Sound starts after the first click |
-| "Open this address" message to the viewer | Links open on the person's machine | Links open in the container's browser |
 | A stated size limit for secrets, or a volume for the agent | Keeping the sign-in across restarts | Signing in again after a restart |
 
 The first four are one line each in the viewer, in the frame's `allow`
