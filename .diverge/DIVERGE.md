@@ -43,9 +43,9 @@ Bot. You need your own Grok Bot account, and its terms apply to you.
 - **A message in.** Each run joins its messages' text and calls one
   routine's webhook with `{"text": "…"}`. The Bot receives that text
   together with the routine's own instruction.
-- **No reply out.** The webhook returns no answer. The run ends with one
-  line saying the message was delivered; the Bot's answer appears in the
-  Grok Bot app.
+- **No reply out.** The webhook returns no answer. The run says in one
+  line that the message was delivered, stays open for ten seconds, and
+  ends; the Bot's answer appears in the Grok Bot app.
 - **Text only.** A message carrying an image, audio or a file is
   refused, not trimmed.
 - **No frontend yet.**

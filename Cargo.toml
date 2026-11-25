@@ -33,5 +33,6 @@ schemars = { version = "1.2.3" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 # `fs` and `io-util` for the installer's file, `process` for apt,
-# `net` and `rt-multi-thread` for the server, `sync` for what is held.
-tokio = { version = "1.54.1", default-features = false, features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync"] }
+# `net` and `rt-multi-thread` for the server, `sync` for what is held,
+# `time` for the run's linger.
+tokio = { version = "1.54.1", default-features = false, features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }

@@ -12,14 +12,16 @@
 //!    answered. A delivery that fails is `502`, with why, and no run.
 //! 3. Otherwise the run is `200`, server-sent events: the messages'
 //!    parts, then one `assistant_text_content` chunk stating that the
-//!    message was delivered and where the Bot's answer appears, and
-//!    the stream ends. The webhook returns no reply, so the run
-//!    carries none.
-//! 4. An enqueue is `409`, `closed`: a run ends as soon as it has
-//!    delivered, so no turn is ever open to take it, and the proxy
-//!    starts the next run on it.
+//!    message was delivered and where the Bot's answer appears. The
+//!    webhook returns no reply, so the run carries none.
+//! 4. The stream stays open for [`LINGER`] after that chunk, and then
+//!    ends. Nothing is read in that time: it stands in for the reading
+//!    of the Bot's reply, which is not built.
+//! 5. An enqueue is `409`, `closed`, at any time: the run takes nothing
+//!    after its delivery, so the proxy starts the next run on it.
 
 use std::convert::Infallible;
+use std::time::Duration;
 
 use axum::Json;
 use axum::http::StatusCode;
@@ -37,6 +39,9 @@ use crate::webhook;
 
 /// What the run says once the message is delivered (rule 3).
 const DELIVERED: &str = "Delivered to Grok Bot. The webhook returns no reply: the Bot's answer appears in the Grok Bot app.";
+
+/// How long the run stays open after its delivery (rule 4).
+const LINGER: Duration = Duration::from_secs(10);
 
 /// A refusal: the status, and a JSON reason.
 type Refusal = (StatusCode, Json<Value>);
@@ -62,7 +67,7 @@ fn text(messages: &[Message]) -> Result<String, Refusal> {
     Ok(parts.join("\n\n"))
 }
 
-/// Rules 1 to 3.
+/// Rules 1 to 4.
 pub async fn run(Json(request): Json<run::request::Request>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, Refusal> {
     let messages = match request {
         run::request::Request::Chat { messages } => messages,
@@ -88,11 +93,13 @@ pub async fn run(Json(request): Json<run::request::Request>) -> Result<Sse<impl 
                 yield Ok(Event::default().data(data));
             }
         }
+        // Rule 4.
+        tokio::time::sleep(LINGER).await;
     };
     Ok(Sse::new(events).keep_alive(KeepAlive::default()))
 }
 
-/// Rule 4.
+/// Rule 5.
 pub async fn enqueue(Json(request): Json<enqueue::request::Request>) -> Result<StatusCode, Refusal> {
     text(&request.messages)?;
     Err((StatusCode::CONFLICT, Json(json!({ "kind": "closed", "error": "no turn is open" }))))
