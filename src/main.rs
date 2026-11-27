@@ -3,8 +3,7 @@
 //!
 //! The program is an HTTP server on the container's loopback, at the
 //! port [`diverge_sdk::container_proxy::inside::port()`] names, and the
-//! proxy beside it is its only caller: `POST /register` once,
-//! `POST /secrets` and `POST /secrets/collect` around every activation,
+//! proxy beside it is its only caller: `POST /register` once, and
 //! `POST /run` and `POST /enqueue`. `--schema`, the program's one
 //! argument, prints the JSON Schema of the arguments it takes, which is
 //! the `schema` of the image's `/.diverge/DIVERGE.md` frontmatter.
@@ -12,7 +11,8 @@
 //! # What it does today
 //!
 //! A run hands its messages' text to the Bot through one routine's
-//! webhook, the one way in the vendor documents. The webhook returns
+//! webhook, the one way in the vendor documents, named by the
+//! arguments. The webhook returns
 //! no reply, so the run carries none: see [`run`].
 //!
 //! # The app
@@ -24,7 +24,6 @@ mod arguments;
 mod install;
 mod register;
 mod run;
-mod secrets;
 mod webhook;
 
 use std::io::Write as _;
@@ -78,8 +77,6 @@ async fn serve() {
     });
     let app = axum::Router::new()
         .route("/register", axum::routing::post(register::register))
-        .route("/secrets", axum::routing::post(secrets::feed))
-        .route("/secrets/collect", axum::routing::post(secrets::collect))
         .route("/run", axum::routing::post(run::run))
         .route("/enqueue", axum::routing::post(run::enqueue));
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", diverge_sdk::container_proxy::inside::port())).await.expect("the port could not be bound");

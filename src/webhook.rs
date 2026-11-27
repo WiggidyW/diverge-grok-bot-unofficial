@@ -17,7 +17,7 @@ use std::sync::OnceLock;
 
 use serde_json::json;
 
-use crate::secrets::{WEBHOOK_KEY, WEBHOOK_URL, text};
+use crate::arguments::Arguments;
 
 /// The one HTTP client, made on first use.
 fn client() -> &'static reqwest::Client {
@@ -25,11 +25,10 @@ fn client() -> &'static reqwest::Client {
     CLIENT.get_or_init(reqwest::Client::new)
 }
 
-/// Why a delivery did not happen. No variant carries a secret's value.
+/// Why a delivery did not happen. No variant carries the address or
+/// the key.
 #[derive(Debug)]
 pub enum Refused {
-    /// A secret the call needs was not fed, or is not text: its name.
-    Secret(&'static str),
     /// The call could not be made at all.
     Unreachable(&'static str),
     /// The webhook answered, and not with `200`: no run started.
@@ -39,20 +38,18 @@ pub enum Refused {
 impl std::fmt::Display for Refused {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Refused::Secret(name) => write!(f, "the secret `{name}` was not fed, or is not text"),
             Refused::Unreachable(why) => write!(f, "the webhook could not be reached: {why}"),
             Refused::Status(status) => write!(f, "the webhook answered {status}: no run started"),
         }
     }
 }
 
-/// Hand `message` to the Bot (rules 1 to 3): `{"text": <message>}`.
-pub async fn deliver(message: &str) -> Result<(), Refused> {
-    let url = text(WEBHOOK_URL).await.map_err(Refused::Secret)?;
-    let key = text(WEBHOOK_KEY).await.map_err(Refused::Secret)?;
-    let answer = client().post(url).bearer_auth(key).json(&json!({ "text": message })).send().await.map_err(|error| {
-        // The error's own text may quote the address, which is a
-        // secret: only its kind is kept.
+/// Hand `message` to the Bot (rules 1 to 3): `{"text": <message>}`,
+/// at the webhook the arguments name.
+pub async fn deliver(arguments: &Arguments, message: &str) -> Result<(), Refused> {
+    let answer = client().post(&arguments.webhook_url).bearer_auth(&arguments.webhook_key).json(&json!({ "text": message })).send().await.map_err(|error| {
+        // The error's own text may quote the address, which is not
+        // for a log: only its kind is kept.
         Refused::Unreachable(if error.is_timeout() {
             "timed out"
         } else if error.is_connect() {

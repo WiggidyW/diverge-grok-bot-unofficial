@@ -1,35 +1,41 @@
-//! `POST /register`: the arguments, once.
+//! `POST /register`: the arguments, once, held for the container's
+//! life.
+
+use std::sync::OnceLock;
 
 use axum::Json;
 use axum::http::StatusCode;
 use diverge_sdk::container_proxy::inside::register;
 use diverge_sdk::container_proxy::inside::register::response::Response;
-use diverge_sdk::shared::containers::secrets::{Declaration, Mode};
 use serde_json::{Value, json};
-use tokio::sync::OnceCell;
 
 use crate::arguments::Arguments;
-use crate::secrets::{WEBHOOK_KEY, WEBHOOK_URL};
 
-/// Whether the one registration has happened.
-static REGISTERED: OnceCell<()> = OnceCell::const_new();
+/// The arguments of the one registration.
+static ARGUMENTS: OnceLock<Arguments> = OnceLock::new();
 
-/// Whether the agent is registered: a run before it is refused.
-pub fn registered() -> bool {
-    REGISTERED.initialized()
+/// The arguments the agent was registered with, or none yet: a run
+/// before the registration is refused.
+pub fn arguments() -> Option<&'static Arguments> {
+    ARGUMENTS.get()
 }
 
-/// `POST /register`: arguments that are not [`Arguments`] are `400`; a
-/// second registration, whatever it carries, is `409`; otherwise `200`,
-/// declaring no dependency, no permission, and the webhook's two
-/// secrets, both `fixed`.
+/// A `400` over the arguments, with why.
+fn refused(error: &str) -> (StatusCode, Json<Value>) {
+    (StatusCode::BAD_REQUEST, Json(json!({ "kind": "arguments", "error": error })))
+}
+
+/// `POST /register`: arguments that are not [`Arguments`], or that
+/// name an empty address or an empty key, are `400`; a second
+/// registration, whatever it carries, is `409`; otherwise `200`,
+/// declaring no dependency and no permission.
 pub async fn register(Json(request): Json<register::request::Request>) -> Result<(StatusCode, Json<Response>), (StatusCode, Json<Value>)> {
-    if let Err(error) = serde_json::from_value::<Arguments>(request.arguments) {
-        return Err((StatusCode::BAD_REQUEST, Json(json!({ "kind": "arguments", "error": error.to_string() }))));
+    let arguments = serde_json::from_value::<Arguments>(request.arguments).map_err(|error| refused(&error.to_string()))?;
+    if arguments.webhook_url.is_empty() || arguments.webhook_key.is_empty() {
+        return Err(refused("`webhook_url` and `webhook_key` are both required, and neither is empty"));
     }
-    let secrets = Declaration::from([(WEBHOOK_URL.to_string(), Mode::Fixed), (WEBHOOK_KEY.to_string(), Mode::Fixed)]);
-    match REGISTERED.set(()) {
-        Ok(()) => Ok((StatusCode::OK, Json(Response { dependencies: Vec::new(), secrets, permissions: Vec::new() }))),
+    match ARGUMENTS.set(arguments) {
+        Ok(()) => Ok((StatusCode::OK, Json(Response::default()))),
         Err(_) => Err((StatusCode::CONFLICT, Json(json!({ "kind": "registered", "error": "the agent is registered, and it never changes" })))),
     }
 }

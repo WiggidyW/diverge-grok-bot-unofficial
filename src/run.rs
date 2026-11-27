@@ -8,8 +8,8 @@
 //!    webhook carries text and nothing else, so images, audio and
 //!    files are refused and not dropped.
 //! 2. The messages' text, joined by blank lines in their order, is
-//!    handed to the Bot through the webhook before the run is
-//!    answered. A delivery that fails is `502`, with why, and no run.
+//!    handed to the Bot through the webhook the arguments name,
+//!    before the run is answered. A delivery that fails is `502`, with why, and no run.
 //! 3. Otherwise the run is `200`, server-sent events: the messages'
 //!    parts, then one `assistant_text_content` chunk stating that the
 //!    message was delivered and where the Bot's answer appears. The
@@ -34,7 +34,7 @@ use futures_util::Stream;
 use rmcp::model::ContentBlock;
 use serde_json::{Value, json};
 
-use crate::register::registered;
+use crate::register::arguments;
 use crate::webhook;
 
 /// What the run says once the message is delivered (rule 3).
@@ -73,11 +73,11 @@ pub async fn run(Json(request): Json<run::request::Request>) -> Result<Sse<impl 
         run::request::Request::Chat { messages } => messages,
         run::request::Request::StructuredDecisions(_) => return Err(content("structured decisions are not supported by this agent")),
     };
-    if !registered() {
+    let Some(arguments) = arguments() else {
         return Err((StatusCode::CONFLICT, Json(json!({ "kind": "unregistered", "error": "the agent is not registered" }))));
-    }
+    };
     let text = text(&messages)?;
-    if let Err(refused) = webhook::deliver(&text).await {
+    if let Err(refused) = webhook::deliver(arguments, &text).await {
         return Err((StatusCode::BAD_GATEWAY, Json(json!({ "kind": "webhook", "error": refused.to_string() }))));
     }
     let mut chunks: Vec<AgenticLoopChunk> = messages.into_iter().flat_map(|message| user_parts(&message.key, message.content)).collect();

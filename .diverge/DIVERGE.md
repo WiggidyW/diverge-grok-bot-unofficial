@@ -6,22 +6,28 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Arguments",
-    "description": "The arguments a Grok Bot agent is made with.\n\nNone: which Bot the agent speaks to is decided by the webhook its\nsecrets name. `{}` is the one value; any member is refused, so a\nmisspelled setting is never silently ignored.\n\n# Secrets\n\n`GROK_BOT_WEBHOOK_URL` and `GROK_BOT_WEBHOOK_KEY`: the address and\nthe key of one routine's webhook, as the Grok Bot app shows them.",
+    "description": "The arguments a Grok Bot agent is made with: the webhook of one\nroutine, which decides which Bot the agent speaks to.\n\nBoth members are required, and any other member is refused, so a\nmisspelled setting is never silently ignored. The arguments are\nstored with the agent's template and are not hidden: whoever can\nread the template can read the key.",
     "type": "object",
-    "additionalProperties": false
+    "properties": {
+      "webhook_url": {
+        "description": "The address the routine's webhook is called at, shown as\n\"POST to\" in the Grok Bot app.",
+        "type": "string",
+        "minLength": 1
+      },
+      "webhook_key": {
+        "description": "The key of the same webhook, sent as its bearer token.",
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "webhook_url",
+      "webhook_key"
+    ]
   },
   "memory": 2147483648,
   "disk": 4294967296,
-  "secrets": [
-    {
-      "name": "GROK_BOT_WEBHOOK_URL",
-      "description": "The address a routine's webhook is called at, shown as \"POST to\" in the Grok Bot app."
-    },
-    {
-      "name": "GROK_BOT_WEBHOOK_KEY",
-      "description": "The key of the same webhook, sent as its bearer token."
-    }
-  ],
   "chat": {
     "prompt_modalities": {
       "image": false,
@@ -57,9 +63,16 @@ Bot. You need your own Grok Bot account, and its terms apply to you.
    what it is sent.
 2. Open the routine's **Webhook** section and copy the address
    ("POST to") and the key.
-3. Bind them to the secrets `GROK_BOT_WEBHOOK_URL` and
-   `GROK_BOT_WEBHOOK_KEY`.
-4. Make an agent template of the image with the arguments `{}`.
+3. Make an agent template of the image with them as its arguments:
+
+   ```json
+   { "webhook_url": "<the address>", "webhook_key": "<the key>" }
+   ```
+
+The arguments are stored with the template and are not hidden: whoever
+can read the template can read the key. Use a routine whose webhook you
+are willing to expose that way, and replace the key in the Grok Bot app
+if it leaks.
 
 ## The app is not in the image
 
@@ -69,4 +82,4 @@ when the container starts, so a starting container needs the vendor's
 download hosts and the Debian mirrors reachable. Nothing uses the app
 yet; it is there for the frontend to come.
 
-Secrets: `GROK_BOT_WEBHOOK_URL`, `GROK_BOT_WEBHOOK_KEY`. Arguments: `{}`.
+Arguments: `webhook_url`, `webhook_key`.

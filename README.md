@@ -12,7 +12,7 @@ image does not contain the Grok Bot app.
 Early and experimental.
 
 - **Works:** a run sends its messages' text to a Bot through a routine's
-  webhook.
+  webhook, which the agent's arguments name.
 - **Does not exist yet:** reading the Bot's reply, files, a frontend.
 
 See [.diverge/DIVERGE.md](.diverge/DIVERGE.md) for what the image does
@@ -21,8 +21,7 @@ and how to set it up.
 ## Layout
 
 - `src/` is the program: an HTTP server the Diverge container proxy
-  calls (`/register`, `/secrets`, `/secrets/collect`, `/run`,
-  `/enqueue`).
+  calls (`/register`, `/run`, `/enqueue`).
 - `.diverge/DIVERGE.md` is the image's document.
 - `Containerfile` builds the image: `podman build -f Containerfile .`
 - `reports/` holds the research: what Grok Bot offers, what its terms
