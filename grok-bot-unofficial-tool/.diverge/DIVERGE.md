@@ -47,6 +47,28 @@ a label and not a credential: nothing checks it against the vendor, and
 nothing is done with it yet beyond telling one account's tool from
 another's.
 
+## It records the app's traffic
+
+**This is an experimental image, and it logs everything the Grok Bot
+app sends and receives.** A proxy inside the container decrypts the
+app's traffic and writes it to files beneath `/var/log/grok-bot-tool`.
+There is no switch to turn it off.
+
+- **What is in the log:** every request and response of the app, with
+  headers and bodies. That includes your sign-in token and every
+  message you and the Bot exchange.
+- **What is not:** pages you open in the tool's browser, your password
+  among them, and the link to the Bot's cloud computer, which is passed
+  through unread.
+- **Where it stays:** in the container. No page and no API serves it.
+  Whoever can run a command in the container or copy its files can
+  read it.
+- **Why:** to learn how the app receives the Bot's reply, so that a
+  run can carry it.
+
+Do not use this image with an account whose contents you are not
+willing to have written to that file.
+
 ## Its two doors
 
 | door | who may come through | what it is |

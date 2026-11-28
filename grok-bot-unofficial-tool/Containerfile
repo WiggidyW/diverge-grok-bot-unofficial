@@ -1,7 +1,7 @@
 # The unofficial Grok Bot tool image: the program, and the desktop it
 # runs the Grok Bot app and a browser on (a display, a window manager,
 # a taskbar, Chromium and the noVNC web client, all Debian's own
-# packages).
+# packages), and the proxy that logs the app's traffic (mitmproxy).
 #
 # The container proxy is NOT in this image. The host injects it at
 # runtime, and it may not be up at all until a request comes.
@@ -57,12 +57,18 @@ RUN apt-get update \
         fonts-liberation \
         fonts-noto-color-emoji \
         novnc \
+        mitmproxy \
+        libnss3-tools \
     && rm -rf /var/lib/apt/lists/*
 
 # The browser's wrapper and launcher, and the desktop's menu.
 COPY --chmod=755 grok-bot-unofficial-tool/desktop/tool-browser /usr/local/bin/tool-browser
 COPY grok-bot-unofficial-tool/desktop/tool-browser.desktop /usr/share/applications/tool-browser.desktop
 COPY grok-bot-unofficial-tool/desktop/menu.xml /root/.config/openbox/menu.xml
+
+# The addon that writes the traffic log. The proxy's certificate
+# authority is NOT here: the proxy makes it in the running container.
+COPY grok-bot-unofficial-tool/desktop/traffic.py /usr/local/share/grok-bot-tool/traffic.py
 
 # The desktop's display, and whose it is.
 ENV DISPLAY=:1 HOME=/root

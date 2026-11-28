@@ -19,6 +19,11 @@ Neither image contains the Grok Bot app.
   frontend is a desktop in the container, with the Grok Bot app and a
   browser on it, where a person signs in.
 
+**The tool image logs the Grok Bot app's network traffic, decrypted,
+to a file in its container, sign-in token and messages included.** That
+is how this project learns how the app works. See the tool's document
+before using it with a real account.
+
 ## Status
 
 Early and experimental. Neither image has been built or run yet.
@@ -28,6 +33,7 @@ Early and experimental. Neither image has been built or run yet.
   chunks back, or refuses up front if the webhook could not be called.
 - **Written:** the tool's frontend, a remote desktop holding the Grok
   Bot app and a browser.
+- **Written:** a proxy in the tool that logs the app's traffic.
 - **Does not exist yet:** reading the Bot's reply, files.
 
 See each image's document for what it does and how to set it up:

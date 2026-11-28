@@ -22,7 +22,8 @@
 //! The Grok Bot desktop app is fetched from the vendor at startup and
 //! is not in the image: see [`install`]. It runs on the tool's
 //! [`desktop`], beside a browser, and the frontend shows both: that is
-//! where a person signs in to it.
+//! where a person signs in to it. Everything the app sends and
+//! receives is recorded by a proxy beside it: see [`traffic`].
 
 mod api;
 mod arguments;
@@ -32,6 +33,7 @@ mod frontend;
 mod install;
 mod mcp;
 mod register;
+mod traffic;
 mod webhook;
 
 use std::io::Write as _;

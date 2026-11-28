@@ -24,8 +24,12 @@
 //!    with the flags a root container needs, and a `.desktop` file of
 //!    ours claims the same schemes for that wrapper, so the link a
 //!    sign-in page hands back reaches the app.
-//! 5. An app that exits is started again after [`AGAIN`].
-//! 6. What has happened so far is the [`Status`], which the frontend
+//! 5. The app is sent through the [`traffic`] proxy, by the same
+//!    wrapper, and is not started unless the proxy is up and trusted:
+//!    a session that is not logged is not wanted, and would be easy to
+//!    miss.
+//! 6. An app that exits is started again after [`AGAIN`].
+//! 7. What has happened so far is the [`Status`], which the frontend
 //!    shows.
 
 use std::process::Stdio;
@@ -36,6 +40,7 @@ use serde::Serialize;
 use tokio::process::Command;
 
 use crate::install;
+use crate::traffic;
 
 /// The display's name.
 pub const DISPLAY: &str = ":1";
@@ -53,10 +58,10 @@ const BROWSER: &str = "/usr/local/bin/tool-browser";
 /// sandbox of its own, and no reliance on a large `/dev/shm`.
 const FLAGS: &str = "--no-sandbox --disable-dev-shm-usage";
 
-/// How long after the app exits it is started again (rule 5).
+/// How long after the app exits it is started again (rule 6).
 const AGAIN: Duration = Duration::from_secs(3);
 
-/// The desktop so far (rule 6).
+/// The desktop so far (rule 7).
 #[derive(Debug, Clone, Serialize)]
 pub struct Status {
     /// Whether the display is up, so the page has something to show.
@@ -91,7 +96,7 @@ fn command(program: &str, bus: &str) -> Command {
     command
 }
 
-/// The desktop, for the container's life: rules 1 to 5. Returns only
+/// The desktop, for the container's life: rules 1 to 6. Returns only
 /// on a failure nothing here recovers from, which the status states.
 pub async fn run() {
     if let Err(why) = up().await {
@@ -100,8 +105,11 @@ pub async fn run() {
     }
 }
 
-/// Rules 1 to 5.
+/// Rules 1 to 6.
 async fn up() -> Result<(), String> {
+    // Rule 5: the proxy starts now, beside everything else, and is
+    // waited on before the app.
+    tokio::spawn(traffic::ready());
     // Rule 1.
     Command::new("Xvnc")
         .args([DISPLAY, "-geometry", "1280x800", "-depth", "24", "-SecurityTypes", "None", "-localhost", "-AlwaysShared", "-rfbport", &VNC_PORT.to_string()])
@@ -136,7 +144,21 @@ async fn up() -> Result<(), String> {
         Err(why) => return Err(format!("Grok Bot was not installed: {why}")),
     };
     let launcher = launcher(&installed.package).await?;
-    write(APP, &format!("#!/bin/sh\nexec \"{}\" {FLAGS} \"$@\"\n", launcher.program), true).await?;
+    // Rule 5.
+    if let Err(why) = traffic::ready().await {
+        return Err(format!("the app's traffic cannot be logged, so the app was not started: {why}"));
+    }
+    let proxy = format!("http://127.0.0.1:{}", traffic::PORT);
+    write(
+        APP,
+        &format!(
+            "#!/bin/sh\nexport HTTP_PROXY={proxy} HTTPS_PROXY={proxy} http_proxy={proxy} https_proxy={proxy}\nexport NO_PROXY=localhost,127.0.0.1 no_proxy=localhost,127.0.0.1\nexport NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS={}\nexec \"{}\" {FLAGS} --proxy-server={proxy} \"$@\"\n",
+            traffic::CERTIFICATE,
+            launcher.program
+        ),
+        true,
+    )
+    .await?;
     let schemes: Vec<String> = launcher.schemes.iter().map(|scheme| format!("x-scheme-handler/{scheme}")).collect();
     write(
         "/root/.local/share/applications/tool-app.desktop",
@@ -145,7 +167,7 @@ async fn up() -> Result<(), String> {
     )
     .await?;
     defaults(&schemes).await?;
-    // Rules 4 and 5.
+    // Rules 4 and 6.
     loop {
         let mut app = command(APP, &bus).spawn().map_err(|error| format!("Grok Bot could not be started: {error}"))?;
         state("running", Some(format!("Grok Bot {}", installed.version)));
