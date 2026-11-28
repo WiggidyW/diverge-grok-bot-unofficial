@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 /// The agent is a thin wrapper: Grok Bot is reached from a tool
 /// container of its own, the `grok-bot-unofficial-tool` image, which
 /// the agent declares as its one dependency. The agent must be told
-/// which image that is, and hands the webhook on to it. Every member
+/// which image that is, and names the webhook to it on every run:
+/// the tool is shared by every agent that declares it, and holds no
+/// webhook of its own. Every member
 /// is required, and any other member is refused, so a misspelled
 /// setting is never silently ignored. The arguments are stored with
 /// the agent's template and are not hidden: whoever can read the

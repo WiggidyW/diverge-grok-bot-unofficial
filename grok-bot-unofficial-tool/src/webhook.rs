@@ -17,7 +17,6 @@ use std::sync::OnceLock;
 
 use serde_json::json;
 
-use crate::arguments::Arguments;
 
 /// The one HTTP client, made on first use.
 fn client() -> &'static reqwest::Client {
@@ -45,9 +44,9 @@ impl std::fmt::Display for Refused {
 }
 
 /// Hand `message` to the Bot (rules 1 to 3): `{"text": <message>}`,
-/// at the webhook the arguments name.
-pub async fn deliver(arguments: &Arguments, message: &str) -> Result<(), Refused> {
-    let answer = client().post(&arguments.webhook_url).bearer_auth(&arguments.webhook_key).json(&json!({ "text": message })).send().await.map_err(|error| {
+/// at the webhook `url` and `key` name.
+pub async fn deliver(url: &str, key: &str, message: &str) -> Result<(), Refused> {
+    let answer = client().post(url).bearer_auth(key).json(&json!({ "text": message })).send().await.map_err(|error| {
         // The error's own text may quote the address, which is not
         // for a log: only its kind is kept.
         Refused::Unreachable(if error.is_timeout() {

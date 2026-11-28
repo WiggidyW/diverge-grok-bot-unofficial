@@ -2,18 +2,20 @@
 //!
 //! The rules:
 //!
-//! 1. `POST` [`PATH`] is the agent's alone. A request before the
-//!    tool's registration is `409`, `unregistered`. A request with no
-//!    stamp, one stamped as a client or as a tool, or one stamped as
-//!    any agent but the one the tool is deployed for, is `403`,
-//!    `forbidden`.
-//! 2. The body is JSON, `{"messages":[{"key":…,"content":[…]}]}`: the
-//!    messages of the agent's run. No message, a message with no
-//!    content, or content that is not text is `400`, `content`: the
-//!    webhook carries text and nothing else, so images, audio and
-//!    files are refused and not dropped.
+//! 1. `POST` [`PATH`] is an agent's. A request before the tool's
+//!    registration is `409`, `unregistered`. A request with no stamp,
+//!    or one stamped as a client or as a tool, is `403`, `forbidden`.
+//!    The tool is every agent's that declares it, so any agent's
+//!    request is taken.
+//! 2. The body is JSON, a [`Turn`]: the webhook of the routine the
+//!    turn is for, and the messages of the agent's run. The webhook
+//!    names which Bot is reached; the tool holds none of its own. An
+//!    empty address or an empty key is `400`, `webhook`. No message, a
+//!    message with no content, or content that is not text is `400`,
+//!    `content`: the webhook carries text and nothing else, so images,
+//!    audio and files are refused and not dropped.
 //! 3. The messages' text, joined by blank lines in their order, is
-//!    handed to the Bot through the webhook before the request is
+//!    handed to the Bot through that webhook before the request is
 //!    answered. A delivery that fails is `502`, `webhook`, with why.
 //! 4. Otherwise the answer is `200`, server-sent events, each event's
 //!    data one chunk of the agent's run: the messages' parts, then one
@@ -32,12 +34,12 @@ use std::time::Duration;
 use axum::Json;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
-use diverge_sdk::container_proxy::inside::agent::enqueue::request::Request;
 use diverge_sdk::container_proxy::inside::agent::run::request::Message;
 use diverge_sdk::provider::endpoints::containers::agents::run::server::response::{AgenticLoopChunk, AssistantTextContentChunk, user_parts};
 use diverge_sdk::shared::mcp::attestation::Caller;
 use futures_util::Stream;
 use rmcp::model::ContentBlock;
+use serde::Deserialize;
 use serde_json::{Value, json};
 
 use crate::register::registered;
@@ -51,6 +53,25 @@ const DELIVERED: &str = "Delivered to Grok Bot. The webhook returns no reply: th
 
 /// How long the turn stays open after its delivery (rule 5).
 const LINGER: Duration = Duration::from_secs(10);
+
+/// The body of a turn (rule 2):
+/// `{"webhook":{"url":…,"key":…},"messages":[{"key":…,"content":[…]}]}`.
+#[derive(Debug, Deserialize)]
+pub struct Turn {
+    /// The webhook of the routine the turn is for.
+    pub webhook: Webhook,
+    /// The messages of the agent's run, in order.
+    pub messages: Vec<Message>,
+}
+
+/// One routine's webhook, as the Grok Bot app shows it.
+#[derive(Debug, Deserialize)]
+pub struct Webhook {
+    /// The address it is called at.
+    pub url: String,
+    /// Its key, sent as the bearer token.
+    pub key: String,
+}
 
 /// A refusal: the status, and a JSON reason.
 type Refusal = (StatusCode, Json<Value>);
@@ -84,20 +105,22 @@ fn text(messages: &[Message]) -> Result<String, Refusal> {
 }
 
 /// Rules 1 to 5.
-pub async fn run(headers: HeaderMap, Json(request): Json<Request>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, Refusal> {
+pub async fn run(headers: HeaderMap, Json(request): Json<Turn>) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, Refusal> {
     // Rule 1.
-    let Some(registered) = registered() else {
+    if !registered() {
         return Err(refused(StatusCode::CONFLICT, "unregistered", "the tool is not registered"));
-    };
+    }
     match caller(&headers) {
-        Ok(Caller::Agent(agent)) if agent.key.template == registered.owner.template && agent.key.index == registered.owner.index => {}
-        Ok(Caller::Agent(_)) => return Err(refused(StatusCode::FORBIDDEN, "forbidden", "another agent's tool")),
-        Ok(_) => return Err(refused(StatusCode::FORBIDDEN, "forbidden", "not the tool's agent")),
+        Ok(Caller::Agent(_)) => {}
+        Ok(_) => return Err(refused(StatusCode::FORBIDDEN, "forbidden", "not an agent")),
         Err(why) => return Err(refused(StatusCode::FORBIDDEN, "forbidden", &why)),
     }
     // Rules 2 and 3.
+    if request.webhook.url.is_empty() || request.webhook.key.is_empty() {
+        return Err(refused(StatusCode::BAD_REQUEST, "webhook", "a turn names its webhook: `url` and `key`, neither empty"));
+    }
     let text = text(&request.messages)?;
-    if let Err(why) = webhook::deliver(&registered.arguments, &text).await {
+    if let Err(why) = webhook::deliver(&request.webhook.url, &request.webhook.key, &text).await {
         return Err(refused(StatusCode::BAD_GATEWAY, "webhook", &why.to_string()));
     }
     // Rule 4.

@@ -6,7 +6,7 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Arguments",
-    "description": "The arguments a Grok Bot agent is made with.\n\nThe agent is a thin wrapper: Grok Bot is reached from a tool\ncontainer of its own, the `grok-bot-unofficial-tool` image, which\nthe agent declares as its one dependency. The agent must be told\nwhich image that is, and hands the webhook on to it. Every member\nis required, and any other member is refused, so a misspelled\nsetting is never silently ignored. The arguments are stored with\nthe agent's template and are not hidden: whoever can read the\ntemplate can read the key.",
+    "description": "The arguments a Grok Bot agent is made with.\n\nThe agent is a thin wrapper: Grok Bot is reached from a tool\ncontainer of its own, the `grok-bot-unofficial-tool` image, which\nthe agent declares as its one dependency. The agent must be told\nwhich image that is, and names the webhook to it on every run:\nthe tool is shared by every agent that declares it, and holds no\nwebhook of its own. Every member\nis required, and any other member is refused, so a misspelled\nsetting is never silently ignored. The arguments are stored with\nthe agent's template and are not hidden: whoever can read the\ntemplate can read the key.",
     "type": "object",
     "properties": {
       "tool": {
@@ -93,8 +93,9 @@ The agent is a thin wrapper. Grok Bot is reached from a second
 container, the **`grok-bot-unofficial-tool`** tool, which this agent
 declares as its one dependency and reaches over the tool's API.
 
-- **A run** posts its messages to the tool. The tool calls one
-  routine's webhook with their text, and the events it answers with are
+- **A run** posts its messages to the tool with the agent's webhook,
+  which says which Bot the run is for. The tool is shared by every
+  agent that declares it. It calls the webhook with the messages' text, and the events it answers with are
   the agent's run.
 - **No reply out.** The webhook returns no answer. The run says in one
   line that the message was delivered, stays open for ten seconds, and
@@ -118,7 +119,8 @@ declares as its one dependency and reaches over the tool's API.
   `references` where its bytes are to be fetched from a registry. It is
   an argument for testing.
 - **`webhook_url`** and **`webhook_key`** are one routine's webhook, as
-  the Grok Bot app shows them. The agent hands them to its tool.
+  the Grok Bot app shows them. The agent names them to its tool on
+  every run.
 
 The arguments are stored with the template and are not hidden: whoever
 can read the template can read the key. Use a routine whose webhook you
@@ -128,7 +130,7 @@ if it leaks.
 ## What it asks of the daemon
 
 One grant, declared at its registration: `api` over the dependency
-tools attached to it, which is its own tool and nothing else.
+tools attached to it, which is its tool and nothing else.
 
 ```json
 {"dependency_tools": {"actions": ["api"], "within": "attached"}}

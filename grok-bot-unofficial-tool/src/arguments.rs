@@ -1,24 +1,19 @@
-//! What the tool takes as its arguments: one routine's webhook.
+//! What the tool takes as its arguments: nothing.
 
 use serde::{Deserialize, Serialize};
 
-/// The arguments a Grok Bot tool is made with: the webhook of one
-/// routine, which decides which Bot the tool speaks to.
+/// The arguments a Grok Bot tool is made with.
 ///
-/// The `grok-bot-unofficial-agent` image declares this tool as its
-/// dependency and hands its own `webhook_url` and `webhook_key` on as
-/// these. Both members are required, and any other member is refused,
-/// so a misspelled setting is never silently ignored. The arguments
-/// are stored with the agent's template and are not hidden: whoever
-/// can read the template can read the key.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+/// None: the tool is every agent's that declares it, and which Bot a
+/// turn reaches is said by the turn itself, which names the webhook.
+/// `{}` is the one value; any member is refused, so a misspelled
+/// setting is never silently ignored.
+///
+/// # How it runs
+///
+/// As a dependency tool of the `grok-bot-unofficial-agent` agent: an
+/// eager tool whose scope is `template`, so one container serves every
+/// agent that declares it.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct Arguments {
-    /// The address the routine's webhook is called at, shown as
-    /// "POST to" in the Grok Bot app.
-    #[schemars(length(min = 1))]
-    pub webhook_url: String,
-    /// The key of the same webhook, sent as its bearer token.
-    #[schemars(length(min = 1))]
-    pub webhook_key: String,
-}
+pub struct Arguments {}

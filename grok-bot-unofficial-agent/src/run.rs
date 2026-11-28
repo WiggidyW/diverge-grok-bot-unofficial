@@ -5,7 +5,8 @@
 //!
 //! 1. A run that is not a chat run is `400`, `content`. A run before
 //!    the registration is `409`, `unregistered`.
-//! 2. The run's messages are posted to the tool, and the tool's answer
+//! 2. The run's messages are posted to the tool with the agent's
+//!    webhook, and the tool's answer
 //!    is had before the run is answered. A tool that refuses with
 //!    `400` is the run's `400`; a tool that refuses with anything
 //!    else, or is not reached, is the run's `502`. Either carries the
@@ -51,9 +52,8 @@ pub async fn run(Json(request): Json<run::request::Request>) -> Result<Sse<impl 
         run::request::Request::Chat { messages } => messages,
         run::request::Request::StructuredDecisions(_) => return Err((StatusCode::BAD_REQUEST, Json(json!({ "kind": "content", "error": "structured decisions are not supported by this agent" })))),
     };
-    let body = serde_json::to_vec(&enqueue::request::Request { messages }).map_err(|error| (StatusCode::BAD_REQUEST, Json(json!({ "kind": "content", "error": error.to_string() }))))?;
     // Rule 2.
-    let mut answers = match tool::begin(body).await {
+    let mut answers = match tool::begin(messages).await {
         Ok(answers) => answers,
         Err(Refused::Unregistered) => return Err((StatusCode::CONFLICT, Json(json!({ "kind": "unregistered", "error": "the agent is not registered" })))),
         Err(Refused::Answered(status, reason)) => {

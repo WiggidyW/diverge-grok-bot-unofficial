@@ -1,11 +1,14 @@
 //! The tool, as the agent reaches it: one request on the tool's API,
 //! through the daemon, for each run.
 //!
-//! The tool is the agent's own dependency tool, a container beside it,
-//! where Grok Bot is reached. The rules:
+//! The tool is the agent's dependency tool, a container beside it and
+//! shared with every agent that declares it, where Grok Bot is
+//! reached. The rules:
 //!
-//! 1. A turn is `POST` [`PATH`] with a JSON body, the run's messages:
-//!    `{"messages":[{"key":…,"content":[…]}]}`.
+//! 1. A turn is `POST` [`PATH`] with a JSON body: the webhook of the
+//!    agent's routine, which says which Bot the turn is for, and the
+//!    run's messages:
+//!    `{"webhook":{"url":…,"key":…},"messages":[{"key":…,"content":[…]}]}`.
 //! 2. The tool answers `200` with server-sent events, or any other
 //!    status with a JSON reason and no events. Which it is, is known
 //!    before the run is answered.
@@ -14,6 +17,7 @@
 use std::sync::OnceLock;
 
 use diverge_sdk::container_proxy::inside::Client;
+use diverge_sdk::container_proxy::inside::agent::run::request::Message;
 use diverge_sdk::daemon::endpoints::dependency_tools::api;
 use diverge_sdk::daemon::endpoints::dependency_tools::api::server::response::Frame;
 use diverge_sdk::shared::containers::api::request::Head;
@@ -62,16 +66,17 @@ async fn handle() -> Result<Handle, String> {
     Ok(handle)
 }
 
-/// Rules 1 to 3: the turn opened on `body`, and the stream its events
-/// come down.
-pub async fn begin(body: Vec<u8>) -> Result<api::client::execute::ExecuteStream, Refused> {
-    let Some(dependency) = register::tool() else {
+/// Rules 1 to 3: the turn opened on `messages`, and the stream its
+/// events come down.
+pub async fn begin(messages: Vec<Message>) -> Result<api::client::execute::ExecuteStream, Refused> {
+    let Some(registered) = register::registered() else {
         return Err(Refused::Unregistered);
     };
+    let body = json!({ "webhook": { "url": registered.webhook_url, "key": registered.webhook_key }, "messages": messages }).to_string().into_bytes();
     let handle = handle().await.map_err(Refused::Unreached)?;
     // Rule 1.
     let request = api::client::request::Frame {
-        dependency: dependency.clone(),
+        dependency: registered.tool.clone(),
         head: Head {
             method: "POST".to_string(),
             path: PATH.to_string(),
