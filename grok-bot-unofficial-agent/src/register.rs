@@ -17,28 +17,20 @@ use sha2::{Digest as _, Sha256};
 
 use crate::arguments::Arguments;
 
-/// What the one registration left.
-pub struct Registered {
-    /// The agent's tool, as the daemon's requests name it.
-    pub tool: reference::Dependency,
-    /// The address of the webhook every run names to the tool.
-    pub webhook_url: String,
-    /// The key of the same webhook.
-    pub webhook_key: String,
-}
+/// The agent's tool, as the daemon's requests name it, kept at the one
+/// registration.
+static TOOL: OnceLock<reference::Dependency> = OnceLock::new();
 
-/// The one registration.
-static REGISTERED: OnceLock<Registered> = OnceLock::new();
-
-/// The registration; `None` before it, which a run is refused for.
-pub fn registered() -> Option<&'static Registered> {
-    REGISTERED.get()
+/// The agent's tool; `None` before the registration, which a run is
+/// refused for.
+pub fn tool() -> Option<&'static reference::Dependency> {
+    TOOL.get()
 }
 
 /// The dependency the agent declares: the tool's image, with nothing
 /// beyond what the image needs, no mount, and the account as its
-/// arguments. The webhook is not in it, so every agent naming the same
-/// image and the same account declares the same tool.
+/// arguments, so every agent naming the same image and the same
+/// account declares the same tool.
 fn dependency(image: Image, account: &str) -> Template {
     Template { image, extra_memory: 0, extra_disk: 0, arguments: json!({ "account": account }), fuse_file_mounts: Vec::new(), fuse_directory_mounts: Vec::new() }
 }
@@ -64,7 +56,7 @@ fn refused(kind: &str, error: &str) -> (StatusCode, Json<Value>) {
 /// `POST /register`. The rules:
 ///
 /// 1. Arguments that are not [`Arguments`], or that name an empty
-///    account, address or key, are `400`.
+///    account, are `400`.
 /// 2. The agent's tool is the dependency tool of the template it
 ///    declares, owned by that template, since the tool's image is of
 ///    scope `template`: one tool for every agent that declares it
@@ -76,15 +68,15 @@ fn refused(kind: &str, error: &str) -> (StatusCode, Json<Value>) {
 pub async fn register(Json(request): Json<register::request::Request>) -> Result<(StatusCode, Json<Response>), (StatusCode, Json<Value>)> {
     // Rule 1.
     let arguments = serde_json::from_value::<Arguments>(request.arguments).map_err(|error| refused("arguments", &error.to_string()))?;
-    if arguments.account.is_empty() || arguments.webhook_url.is_empty() || arguments.webhook_key.is_empty() {
-        return Err(refused("arguments", "`account`, `webhook_url` and `webhook_key` are all required, and none is empty"));
+    if arguments.account.is_empty() {
+        return Err(refused("arguments", "`account` is required, and is not empty"));
     }
     // Rule 2.
     let template = dependency(arguments.tool, &arguments.account);
     let id = id(&template).map_err(|error| refused("arguments", &error.to_string()))?;
     let tool = reference::Dependency { template: id, owner: reference::Owner::Template };
     // Rules 3 and 4.
-    if REGISTERED.set(Registered { tool, webhook_url: arguments.webhook_url, webhook_key: arguments.webhook_key }).is_err() {
+    if TOOL.set(tool).is_err() {
         return Err((StatusCode::CONFLICT, Json(json!({ "kind": "registered", "error": "the agent is registered, and it never changes" }))));
     }
     Ok((StatusCode::OK, Json(Response { dependencies: vec![template], permissions: permissions() })))

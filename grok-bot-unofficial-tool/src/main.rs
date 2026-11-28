@@ -4,14 +4,14 @@
 //!
 //! The agent is a thin wrapper. When a run comes to it, it posts the
 //! run's messages to this tool's API; the tool hands their text to the
-//! Bot through one routine's webhook, the one way in the vendor
-//! documents, and answers with the chunks of the agent's run.
+//! Bot through the webhook set for that agent, the one way in the
+//! vendor documents, and answers with the chunks of the agent's run.
 //!
 //! The program is an HTTP server on the container's loopback, at the
 //! port [`diverge_sdk::container_proxy::inside::port()`] names, and the
 //! proxy beside it is its only caller: `POST /register` once
-//! ([`register`]), the MCP server at `/mcp`, which serves no tool
-//! ([`mcp`]), the agent's turn beneath `/api` ([`api`]), and the
+//! ([`register`]), the MCP server at `/mcp`, by whose tools an agent's
+//! webhook is set ([`mcp`], kept by [`store`]), the agent's turn beneath `/api` ([`api`]), and the
 //! frontend beneath `/frontend` ([`frontend`]).
 //! `--schema`, the program's one argument, prints the JSON Schema of
 //! the arguments it takes, which is the `schema` of the image's
@@ -33,6 +33,7 @@ mod frontend;
 mod install;
 mod mcp;
 mod register;
+mod store;
 mod traffic;
 mod webhook;
 
@@ -91,7 +92,7 @@ async fn serve() {
         }
     });
     tokio::spawn(desktop::run());
-    let served = StreamableHttpService::new(|| Ok(mcp::Nothing), Arc::new(LocalSessionManager::default()), StreamableHttpServerConfig::default());
+    let served = StreamableHttpService::new(|| Ok(mcp::Server), Arc::new(LocalSessionManager::default()), StreamableHttpServerConfig::default());
     let app = axum::Router::new()
         .route("/register", axum::routing::post(register::register))
         .nest_service("/mcp", served)

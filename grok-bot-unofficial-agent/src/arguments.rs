@@ -1,5 +1,5 @@
-//! What the agent takes as its arguments: its tool's image, and one
-//! routine's webhook.
+//! What the agent takes as its arguments: its tool's image, and the
+//! account it is for.
 
 use diverge_sdk::shared::containers::request::Image;
 use serde::{Deserialize, Serialize};
@@ -9,14 +9,14 @@ use serde::{Deserialize, Serialize};
 /// The agent is a thin wrapper: Grok Bot is reached from a tool
 /// container of its own, the `grok-bot-unofficial-tool` image, which
 /// the agent declares as its one dependency. The agent must be told
-/// which image that is and which account it is for, and names the
-/// webhook to it on every run. One tool is one Grok Bot account: every
-/// agent made with the same `tool` and `account` shares one container,
-/// and agents of another account have another. Every member
-/// is required, and any other member is refused, so a misspelled
-/// setting is never silently ignored. The arguments are stored with
-/// the agent's template and are not hidden: whoever can read the
-/// template can read the key.
+/// which image that is and which account it is for. One tool is one
+/// Grok Bot account: every agent made with the same `tool` and
+/// `account` shares one container, and agents of another account have
+/// another. Every member is required, and any other member is refused,
+/// so a misspelled setting is never silently ignored.
+///
+/// Which Bot the agent speaks to is not an argument. It is the webhook
+/// set for the agent in its tool, with the tool's `set_webhook`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Arguments {
@@ -32,11 +32,4 @@ pub struct Arguments {
     /// tool.
     #[schemars(length(min = 1))]
     pub account: String,
-    /// The address a routine's webhook is called at, shown as
-    /// "POST to" in the Grok Bot app.
-    #[schemars(length(min = 1))]
-    pub webhook_url: String,
-    /// The key of the same webhook, sent as its bearer token.
-    #[schemars(length(min = 1))]
-    pub webhook_key: String,
 }

@@ -29,9 +29,12 @@ futures-util = { workspace = true, features = ["sink"] }
 # The webhook call, the release feed and the installer's download. The
 # same line and TLS stack the SDK rides.
 reqwest = { version = "0.13", default-features = false, features = ["http2", "rustls", "json", "stream"] }
-# The MCP server, which serves no tool, and the content blocks a
-# message is made of.
+# The MCP server, by whose tools an agent's webhook is set, and the
+# content blocks a message is made of.
 rmcp = { version = "3.11.0", default-features = false, features = ["server", "transport-streamable-http-server"] }
+# The webhooks: the tool's `template` database, through the proxy's
+# loopback pgwire.
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres"] }
 # `--schema` states the arguments'.
 schemars = { workspace = true }
 serde = { workspace = true }

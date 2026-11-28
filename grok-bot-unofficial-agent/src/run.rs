@@ -5,8 +5,7 @@
 //!
 //! 1. A run that is not a chat run is `400`, `content`. A run before
 //!    the registration is `409`, `unregistered`.
-//! 2. The run's messages are posted to the tool with the agent's
-//!    webhook, and the tool's answer
+//! 2. The run's messages are posted to the tool, and the tool's answer
 //!    is had before the run is answered. A tool that refuses with
 //!    `400` is the run's `400`; a tool that refuses with anything
 //!    else, or is not reached, is the run's `502`. Either carries the

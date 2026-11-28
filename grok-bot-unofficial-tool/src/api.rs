@@ -7,16 +7,18 @@
 //!    or one stamped as a client or as a tool, is `403`, `forbidden`.
 //!    The tool is every agent's that declares it with its account,
 //!    so any agent's request is taken.
-//! 2. The body is JSON, a [`Turn`]: the webhook of the routine the
-//!    turn is for, and the messages of the agent's run. The webhook
-//!    names which Bot is reached; the tool holds none of its own. An
-//!    empty address or an empty key is `400`, `webhook`. No message, a
-//!    message with no content, or content that is not text is `400`,
-//!    `content`: the webhook carries text and nothing else, so images,
-//!    audio and files are refused and not dropped.
-//! 3. The messages' text, joined by blank lines in their order, is
-//!    handed to the Bot through that webhook before the request is
-//!    answered. A delivery that fails is `502`, `webhook`, with why.
+//! 2. The body is JSON, a [`Turn`]: the messages of the agent's run.
+//!    No message, a message with no content, or content that is not
+//!    text is `400`, `content`: the webhook carries text and nothing
+//!    else, so images, audio and files are refused and not dropped.
+//! 3. The turn goes to the calling agent's webhook, as the agent set
+//!    it with the MCP server's `set_webhook` ([`mcp`](crate::mcp)).
+//!    The agent is the one the daemon attests, so no agent's turn goes
+//!    to another's Bot. With none set the answer is `409`,
+//!    `no_webhook`; with the webhooks not readable it is `503`,
+//!    `store`. The messages' text, joined by blank lines in their
+//!    order, is handed to the Bot through that webhook before the
+//!    request is answered. A delivery that fails is `502`, `webhook`, with why.
 //! 4. Otherwise the answer is `200`, server-sent events, each event's
 //!    data one chunk of the agent's run: the messages' parts, then one
 //!    `assistant_text_content` chunk stating that the message was
@@ -44,6 +46,7 @@ use serde_json::{Value, json};
 
 use crate::caller::caller;
 use crate::register::registered;
+use crate::store;
 use crate::webhook;
 
 /// The path of the turn.
@@ -56,22 +59,11 @@ const DELIVERED: &str = "Delivered to Grok Bot. The webhook returns no reply: th
 const LINGER: Duration = Duration::from_secs(10);
 
 /// The body of a turn (rule 2):
-/// `{"webhook":{"url":…,"key":…},"messages":[{"key":…,"content":[…]}]}`.
+/// `{"messages":[{"key":…,"content":[…]}]}`.
 #[derive(Debug, Deserialize)]
 pub struct Turn {
-    /// The webhook of the routine the turn is for.
-    pub webhook: Webhook,
     /// The messages of the agent's run, in order.
     pub messages: Vec<Message>,
-}
-
-/// One routine's webhook, as the Grok Bot app shows it.
-#[derive(Debug, Deserialize)]
-pub struct Webhook {
-    /// The address it is called at.
-    pub url: String,
-    /// Its key, sent as the bearer token.
-    pub key: String,
 }
 
 /// A refusal: the status, and a JSON reason.
@@ -103,17 +95,19 @@ pub async fn run(headers: HeaderMap, Json(request): Json<Turn>) -> Result<Sse<im
     if !registered() {
         return Err(refused(StatusCode::CONFLICT, "unregistered", "the tool is not registered"));
     }
-    match caller(&headers) {
-        Ok(Caller::Agent(_)) => {}
+    let agent = match caller(&headers) {
+        Ok(Caller::Agent(agent)) => agent.key,
         Ok(_) => return Err(refused(StatusCode::FORBIDDEN, "forbidden", "not an agent")),
         Err(why) => return Err(refused(StatusCode::FORBIDDEN, "forbidden", &why)),
-    }
+    };
     // Rules 2 and 3.
-    if request.webhook.url.is_empty() || request.webhook.key.is_empty() {
-        return Err(refused(StatusCode::BAD_REQUEST, "webhook", "a turn names its webhook: `url` and `key`, neither empty"));
-    }
     let text = text(&request.messages)?;
-    if let Err(why) = webhook::deliver(&request.webhook.url, &request.webhook.key, &text).await {
+    let set = match store::get(&agent).await {
+        Ok(Some(set)) => set,
+        Ok(None) => return Err(refused(StatusCode::CONFLICT, "no_webhook", "no webhook is set for this agent: set one with the tool's `set_webhook`, called as the agent")),
+        Err(why) => return Err(refused(StatusCode::SERVICE_UNAVAILABLE, "store", &why)),
+    };
+    if let Err(why) = webhook::deliver(&set.url, &set.key, &text).await {
         return Err(refused(StatusCode::BAD_GATEWAY, "webhook", &why.to_string()));
     }
     // Rule 4.

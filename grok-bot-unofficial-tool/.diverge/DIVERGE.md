@@ -6,7 +6,7 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Arguments",
-    "description": "The arguments a Grok Bot tool is made with.\n\nOne tool is one Grok Bot account: the app signs in once, so each\naccount has a container of its own, and every agent made with the\nsame `account` shares it. Which Bot of the account a turn reaches\nis said by the turn itself, which names the webhook. Any other\nmember is refused, so a misspelled setting is never silently\nignored.\n\n# How it runs\n\nAs a dependency tool of the `grok-bot-unofficial-agent` agent: an\neager tool whose scope is `template`, so one container serves every\nagent that declares it with the same account.",
+    "description": "The arguments a Grok Bot tool is made with.\n\nOne tool is one Grok Bot account: the app signs in once, so each\naccount has a container of its own, and every agent made with the\nsame `account` shares it. Which Bot of the account an agent's turns\nreach is said by the webhook set for that agent, through the tool's\nMCP server. Any other\nmember is refused, so a misspelled setting is never silently\nignored.\n\n# How it runs\n\nAs a dependency tool of the `grok-bot-unofficial-agent` agent: an\neager tool whose scope is `template`, so one container serves every\nagent that declares it with the same account.",
     "type": "object",
     "properties": {
       "account": {
@@ -39,8 +39,8 @@ account, and its terms apply to you.
 account has a container of its own, and every agent made with the same
 `account` shares it. Nothing is made by hand: the agent declares this
 image as its dependency with its account, and the daemon deploys it.
-The tool holds no webhook of its own; each turn names the one it is
-for, which says which Bot of the account is reached.
+Which Bot of the account an agent reaches is the webhook set for that
+agent, through the tool's MCP server.
 
 Arguments: `{"account": "…"}`, a name you choose for the account. It is
 a label and not a credential: nothing checks it against the vendor, and
@@ -76,8 +76,37 @@ willing to have written to that file.
 | `/frontend` | a person: a request the daemon stamps as a client | the tool's desktop, with the Grok Bot app and a browser on it |
 | `POST /api/run` | any agent that declares the tool, and nobody else | one turn: the agent's messages in, the chunks of its run out |
 
-The tool serves an MCP server, as every tool does, with no tool on it.
 It declares no permission: it asks the daemon nothing.
+
+## Its MCP tools
+
+An agent's turns go to one routine's webhook. That webhook is set here,
+by a call made **as the agent**, and kept in the tool's database, so it
+outlives the container. Each tool acts on the calling agent's own
+webhook and on no other's.
+
+| tool | takes | what it does |
+|---|---|---|
+| `set_webhook` | `url`, `key` | Sets the agent's webhook, replacing any it had |
+| `get_webhook` | nothing | Says whether one is set, and its address; never the key |
+| `clear_webhook` | nothing | Forgets it |
+
+`url` is the address the Grok Bot app shows as "POST to" in the
+routine's Webhook section, and `key` is the key shown beside it. To get
+them, ask your Bot in the Grok Bot app to add a webhook trigger to a
+routine; the routine's instruction decides what the Bot does with what
+it is sent.
+
+From the command line, as the agent (the tool's name there carries the
+dependency's prefix, which `list-tools` shows):
+
+```
+diverge run agents connect list-tools '{"agent":{"name":"<agent>"}}'
+diverge run agents connect call-tool --name <prefix>_set_webhook --arguments '{"url":"…","key":"…"}' '{"agent":{"name":"<agent>"}}'
+```
+
+The key is stored in the clear in the tool's database: it is a
+credential the tool has to send as it is.
 
 ## The frontend
 
@@ -107,27 +136,19 @@ sign in, and finish in the browser window that opens beside it.
 
 ## A turn
 
-The agent posts JSON:
-
-```json
-{
-  "webhook": { "url": "<the address>", "key": "<the key>" },
-  "messages": [{ "key": "…", "content": [] }]
-}
-```
-
-`webhook` is one routine's webhook, as the Grok Bot app shows it, and
-says which Bot the turn reaches. The tool joins the messages' text,
-calls that webhook with `{"text": "…"}`, and answers only once the
-webhook has. It keeps neither the address nor the key.
+The agent posts JSON, `{"messages":[{"key":…,"content":[…]}]}`. The
+tool looks up the webhook set for the calling agent, joins the
+messages' text, calls the webhook with `{"text": "…"}`, and answers
+only once the webhook has.
 
 | answer | what it states |
 |---|---|
 | `200`, server-sent events | The webhook accepted the message. Each event's data is one chunk of the agent's run: the messages' parts, then one line stating that the message was delivered. The stream stays open for ten seconds and ends. |
-| `400`, `{"kind":"webhook",…}` | The turn names no webhook: an empty address or an empty key. |
 | `400`, `{"kind":"content",…}` | No message, a message with no content, or content that is not text. |
 | `403`, `{"kind":"forbidden",…}` | The caller is not an agent. |
 | `409`, `{"kind":"unregistered",…}` | The tool is not registered yet. |
+| `409`, `{"kind":"no_webhook",…}` | No webhook is set for the calling agent. Set one with `set_webhook`. |
+| `503`, `{"kind":"store",…}` | The tool's database could not be read. |
 | `502`, `{"kind":"webhook",…}` | The webhook was not reached, or did not answer `200`. No run started. |
 
 The webhook returns no reply, so a turn carries none: the Bot's answer

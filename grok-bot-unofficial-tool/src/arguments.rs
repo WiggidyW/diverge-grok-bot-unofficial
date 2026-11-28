@@ -6,8 +6,9 @@ use serde::{Deserialize, Serialize};
 ///
 /// One tool is one Grok Bot account: the app signs in once, so each
 /// account has a container of its own, and every agent made with the
-/// same `account` shares it. Which Bot of the account a turn reaches
-/// is said by the turn itself, which names the webhook. Any other
+/// same `account` shares it. Which Bot of the account an agent's turns
+/// reach is said by the webhook set for that agent, through the tool's
+/// MCP server. Any other
 /// member is refused, so a misspelled setting is never silently
 /// ignored.
 ///

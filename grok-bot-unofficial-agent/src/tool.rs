@@ -5,10 +5,10 @@
 //! shared with every agent of the same account, where Grok Bot is
 //! reached. The rules:
 //!
-//! 1. A turn is `POST` [`PATH`] with a JSON body: the webhook of the
-//!    agent's routine, which says which Bot the turn is for, and the
-//!    run's messages:
-//!    `{"webhook":{"url":…,"key":…},"messages":[{"key":…,"content":[…]}]}`.
+//! 1. A turn is `POST` [`PATH`] with a JSON body, the run's messages:
+//!    `{"messages":[{"key":…,"content":[…]}]}`. Which Bot the turn is
+//!    for is the tool's to know: the webhook set for this agent, whom
+//!    the daemon attests on the request.
 //! 2. The tool answers `200` with server-sent events, or any other
 //!    status with a JSON reason and no events. Which it is, is known
 //!    before the run is answered.
@@ -69,14 +69,14 @@ async fn handle() -> Result<Handle, String> {
 /// Rules 1 to 3: the turn opened on `messages`, and the stream its
 /// events come down.
 pub async fn begin(messages: Vec<Message>) -> Result<api::client::execute::ExecuteStream, Refused> {
-    let Some(registered) = register::registered() else {
+    let Some(dependency) = register::tool() else {
         return Err(Refused::Unregistered);
     };
-    let body = json!({ "webhook": { "url": registered.webhook_url, "key": registered.webhook_key }, "messages": messages }).to_string().into_bytes();
+    let body = json!({ "messages": messages }).to_string().into_bytes();
     let handle = handle().await.map_err(Refused::Unreached)?;
     // Rule 1.
     let request = api::client::request::Frame {
-        dependency: registered.tool.clone(),
+        dependency: dependency.clone(),
         head: Head {
             method: "POST".to_string(),
             path: PATH.to_string(),
