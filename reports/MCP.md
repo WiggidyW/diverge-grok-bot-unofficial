@@ -38,15 +38,9 @@
 - **A private network needs a yes first:** "Adding a server on a private network, or one that uses a private certificate authority, asks for your approval first."
 - **Teams can restrict it:** an admin can block a connector, and an Enterprise team can keep an allowlist of MCP servers. A personal account has neither.
 
-### Plugins and skills
+### No install link for a custom server
 
-- **A skill** is "a reusable set of instructions for how to do a task."
-- **A plugin** is a marketplace item that bundles connectors and skills. The docs do not describe how one is made or published.
-- **A custom connector has no link:** "A custom connector you added yourself has no link." So a one-click install link is only for marketplace plugins.
-
-### Other ways out of the Bot
-
-The docs name what a network policy covers: "Shell commands and the browser on the computer, WebFetch, and connected apps (MCP servers)". So besides MCP, the Bot can call any public HTTP address from its cloud computer.
+"A custom connector you added yourself has no link." A one-click link exists only for a marketplace plugin, which can carry an MCP server inside it. Plugins, skills and every other way in or out of a Bot that is not MCP are in `PLUGINS.md`.
 
 ## 3. The obstacle: our tool has no public address
 
