@@ -32,6 +32,13 @@ RUN cargo build --release --locked -p grok-bot-unofficial-agent
 # first published.
 FROM docker.io/library/debian:trixie-slim
 
+# CA certificates. The agent's own program makes no TLS call, but the
+# container proxy the host injects loads the system's certificates when
+# it starts, and ends at once where there are none.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /build/target/release/grok-bot-unofficial-agent /usr/local/bin/grok-bot-unofficial-agent
 
 # The image's arguments schema and its description, read by the proxy.
