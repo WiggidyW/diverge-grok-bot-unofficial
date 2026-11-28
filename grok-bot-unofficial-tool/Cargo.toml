@@ -19,10 +19,13 @@ path = "src/main.rs"
 diverge-sdk = { workspace = true }
 # The turn as a generator of events.
 async-stream = { workspace = true }
-# The program's door: `/register`, the MCP server at `/mcp`, and the
-# agent's turn beneath `/api`.
-axum = { workspace = true }
-futures-util = { workspace = true }
+# The program's door: `/register`, the MCP server at `/mcp`, the
+# agent's turn beneath `/api`, and the frontend beneath `/frontend`,
+# its socket to the display included.
+axum = { workspace = true, features = ["ws"] }
+# The noVNC web client's files, served from where Debian installs them.
+tower-http = { version = "0.6", default-features = false, features = ["fs"] }
+futures-util = { workspace = true, features = ["sink"] }
 # The webhook call, the release feed and the installer's download. The
 # same line and TLS stack the SDK rides.
 reqwest = { version = "0.13", default-features = false, features = ["http2", "rustls", "json", "stream"] }

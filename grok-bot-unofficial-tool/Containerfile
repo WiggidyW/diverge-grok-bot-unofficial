@@ -1,4 +1,7 @@
-# The unofficial Grok Bot tool image: the program alone.
+# The unofficial Grok Bot tool image: the program, and the desktop it
+# runs the Grok Bot app and a browser on (a display, a window manager,
+# a taskbar, Chromium and the noVNC web client, all Debian's own
+# packages).
 #
 # The container proxy is NOT in this image. The host injects it at
 # runtime, and it may not be up at all until a request comes.
@@ -36,12 +39,33 @@ RUN cargo build --release --locked -p grok-bot-unofficial-tool
 FROM docker.io/library/debian:trixie-slim
 
 # CA certificates so TLS works at all, for the webhook, the vendor's
-# release feed and the package's download. Nothing of the app's own
+# release feed and the package's download. Then the desktop: the
+# display (Xvnc), the window manager and taskbar, the session bus, the
+# browser, what opens a link in the default program, fonts, and the
+# noVNC web client the frontend serves. Nothing of the app's own
 # dependencies is installed here: apt resolves them at startup from
 # what the package itself declares.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        tigervnc-standalone-server \
+        openbox \
+        tint2 \
+        dbus-x11 \
+        chromium \
+        xdg-utils \
+        fonts-liberation \
+        fonts-noto-color-emoji \
+        novnc \
     && rm -rf /var/lib/apt/lists/*
+
+# The browser's wrapper and launcher, and the desktop's menu.
+COPY --chmod=755 grok-bot-unofficial-tool/desktop/tool-browser /usr/local/bin/tool-browser
+COPY grok-bot-unofficial-tool/desktop/tool-browser.desktop /usr/share/applications/tool-browser.desktop
+COPY grok-bot-unofficial-tool/desktop/menu.xml /root/.config/openbox/menu.xml
+
+# The desktop's display, and whose it is.
+ENV DISPLAY=:1 HOME=/root
 
 COPY --from=build /build/target/release/grok-bot-unofficial-tool /usr/local/bin/grok-bot-unofficial-tool
 

@@ -42,6 +42,7 @@ use rmcp::model::ContentBlock;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use crate::caller::caller;
 use crate::register::registered;
 use crate::webhook;
 
@@ -79,14 +80,6 @@ type Refusal = (StatusCode, Json<Value>);
 /// A refusal of `kind`, with why.
 fn refused(status: StatusCode, kind: &str, error: &str) -> Refusal {
     (status, Json(json!({ "kind": kind, "error": error })))
-}
-
-/// The caller, from the `diverge.network` header the daemon stamped
-/// the request with, or why it has none.
-fn caller(headers: &HeaderMap) -> Result<Caller, String> {
-    let stamp = headers.get(diverge_sdk::shared::mcp::KEY).ok_or_else(|| "the request carries no stamp".to_string())?;
-    let text = stamp.to_str().map_err(|error| error.to_string())?;
-    serde_json::from_str::<Caller>(text).map_err(|error| error.to_string())
 }
 
 /// Rule 2's check of the content, and rule 3's text.

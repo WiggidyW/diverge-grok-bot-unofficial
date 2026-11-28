@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The desktop's menu, on a right click of the background: the two
+     things the tool runs, for when a window has been closed. -->
+<openbox_menu xmlns="http://openbox.org/3.4/menu">
+  <menu id="root-menu" label="Grok Bot tool">
+    <item label="Grok Bot">
+      <action name="Execute"><command>/usr/local/bin/tool-app</command></action>
+    </item>
+    <item label="Browser">
+      <action name="Execute"><command>/usr/local/bin/tool-browser</command></action>
+    </item>
+  </menu>
+</openbox_menu>

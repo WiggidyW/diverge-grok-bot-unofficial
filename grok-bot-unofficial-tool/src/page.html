@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grok Bot</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #16181c; color: #d8dbe0; font: 14px/1.4 system-ui, sans-serif; }
+  #screen { position: fixed; inset: 0; }
+  #note {
+    position: fixed; left: 50%; top: 12px; transform: translateX(-50%);
+    max-width: calc(100% - 32px); box-sizing: border-box;
+    padding: 6px 12px; border-radius: 6px;
+    background: #2a2d33; border: 1px solid #3a3e46;
+    overflow-wrap: anywhere;
+  }
+  #note[hidden] { display: none; }
+</style>
+</head>
+<body>
+<div id="screen"></div>
+<div id="note" role="status">Starting…</div>
+<script type="module">
+// Every address is relative: the page is served beneath /frontend/.
+import RFB from "./novnc/core/rfb.js";
+
+const screen = document.getElementById("screen");
+const note = document.getElementById("note");
+let rfb = null;
+let connected = false;
+
+// What the note says for a status, or nothing where all is well.
+function say(status) {
+  if (status.state === "running" && connected) return "";
+  if (status.state === "starting") return "Starting the desktop…";
+  if (status.state === "installing") return "Fetching and installing Grok Bot. This takes a few minutes; the browser is ready meanwhile.";
+  if (status.state === "restarting") return status.detail || "Grok Bot is being started again.";
+  if (status.state === "failed") return "Failed: " + (status.detail || "no reason given");
+  return connected ? "" : "Connecting to the desktop…";
+}
+
+// The display's connection, opened once the display is up.
+function connect() {
+  const url = new URL("vnc", location.href);
+  url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  rfb = new RFB(screen, url.href);
+  rfb.resizeSession = true;
+  rfb.scaleViewport = false;
+  rfb.addEventListener("connect", () => { connected = true; });
+  rfb.addEventListener("disconnect", () => { connected = false; rfb = null; });
+}
+
+async function poll() {
+  try {
+    const status = await (await fetch("status")).json();
+    if (status.display && !rfb) connect();
+    const text = say(status);
+    note.textContent = text;
+    note.hidden = text === "";
+  } catch (error) {
+    note.textContent = "The tool is not answering.";
+    note.hidden = false;
+  }
+  setTimeout(poll, 2000);
+}
+poll();
+</script>
+</body>
+</html>

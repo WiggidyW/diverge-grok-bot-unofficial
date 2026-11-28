@@ -1,0 +1,5 @@
+#!/bin/sh
+# The tool's browser: Debian's Chromium, with the flags a root
+# container needs. It has no sandbox of its own here, and does not rely
+# on a large /dev/shm.
+exec chromium --no-sandbox --disable-dev-shm-usage --no-first-run --no-default-browser-check "$@"

@@ -15,7 +15,9 @@ Neither image contains the Grok Bot app.
 - **`grok-bot-unofficial-tool`** is the agent's tool: where Grok Bot
   is reached. One container is one Grok Bot account, shared by every
   agent made with that account's name. It serves each agent's turn on
-  its API, and each turn names the webhook of the Bot it is for. It will serve the frontend.
+  its API, and each turn names the webhook of the Bot it is for. Its
+  frontend is a desktop in the container, with the Grok Bot app and a
+  browser on it, where a person signs in.
 
 ## Status
 
@@ -24,7 +26,9 @@ Early and experimental. Neither image has been built or run yet.
 - **Written:** a run posts its messages to the tool; the tool sends
   their text to a Bot through a routine's webhook and streams the run's
   chunks back, or refuses up front if the webhook could not be called.
-- **Does not exist yet:** reading the Bot's reply, files, a frontend.
+- **Written:** the tool's frontend, a remote desktop holding the Grok
+  Bot app and a browser.
+- **Does not exist yet:** reading the Bot's reply, files.
 
 See each image's document for what it does and how to set it up:
 [the agent's](grok-bot-unofficial-agent/.diverge/DIVERGE.md) and
