@@ -1,0 +1,5 @@
+# Kept out of an image build's context: nothing here is copied by
+# either Containerfile, and `target` alone is several gigabytes.
+target
+.git
+reports
