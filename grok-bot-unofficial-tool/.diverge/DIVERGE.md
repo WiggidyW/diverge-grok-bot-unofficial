@@ -6,9 +6,19 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Arguments",
-    "description": "The arguments a Grok Bot tool is made with.\n\nNone: the tool is every agent's that declares it, and which Bot a\nturn reaches is said by the turn itself, which names the webhook.\n`{}` is the one value; any member is refused, so a misspelled\nsetting is never silently ignored.\n\n# How it runs\n\nAs a dependency tool of the `grok-bot-unofficial-agent` agent: an\neager tool whose scope is `template`, so one container serves every\nagent that declares it.",
+    "description": "The arguments a Grok Bot tool is made with.\n\nOne tool is one Grok Bot account: the app signs in once, so each\naccount has a container of its own, and every agent made with the\nsame `account` shares it. Which Bot of the account a turn reaches\nis said by the turn itself, which names the webhook. Any other\nmember is refused, so a misspelled setting is never silently\nignored.\n\n# How it runs\n\nAs a dependency tool of the `grok-bot-unofficial-agent` agent: an\neager tool whose scope is `template`, so one container serves every\nagent that declares it with the same account.",
     "type": "object",
-    "additionalProperties": false
+    "properties": {
+      "account": {
+        "description": "A name for the Grok Bot account, chosen by whoever makes the\nagents: any text that is not empty. It is a label and not a\ncredential, and nothing checks it against the vendor. It tells\none account's tool from another's, and nothing else is done\nwith it yet.",
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false,
+    "required": [
+      "account"
+    ]
   },
   "memory": 2147483648,
   "disk": 4294967296,
@@ -24,12 +34,17 @@ reaches **your own Grok Bot**. This image is not made, endorsed or
 supported by the makers of Grok Bot. You need your own Grok Bot
 account, and its terms apply to you.
 
-It is a shared dependency tool: one container serves every agent that
-declares it. Nothing is made by hand: the agent declares this image as
-its dependency, and the daemon deploys it. The tool holds no webhook of
-its own; each turn names the one it is for.
+**One tool is one Grok Bot account.** The app signs in once, so each
+account has a container of its own, and every agent made with the same
+`account` shares it. Nothing is made by hand: the agent declares this
+image as its dependency with its account, and the daemon deploys it.
+The tool holds no webhook of its own; each turn names the one it is
+for, which says which Bot of the account is reached.
 
-Arguments: `{}`.
+Arguments: `{"account": "…"}`, a name you choose for the account. It is
+a label and not a credential: nothing checks it against the vendor, and
+nothing is done with it yet beyond telling one account's tool from
+another's.
 
 ## Its door
 

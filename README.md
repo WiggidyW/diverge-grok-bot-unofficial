@@ -12,10 +12,10 @@ Neither image contains the Grok Bot app.
 
 - **`grok-bot-unofficial-agent`** is the agent: a thin wrapper. It
   declares the tool as its dependency and relays each run to it.
-- **`grok-bot-unofficial-tool`** is the agent's tool, one container
-  shared by every agent that declares it: where Grok Bot is reached. It
-  serves each agent's turn on its API, and each turn names the webhook
-  it is for. It will serve the frontend.
+- **`grok-bot-unofficial-tool`** is the agent's tool: where Grok Bot
+  is reached. One container is one Grok Bot account, shared by every
+  agent made with that account's name. It serves each agent's turn on
+  its API, and each turn names the webhook of the Bot it is for. It will serve the frontend.
 
 ## Status
 

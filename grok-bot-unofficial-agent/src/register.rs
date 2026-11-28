@@ -36,11 +36,11 @@ pub fn registered() -> Option<&'static Registered> {
 }
 
 /// The dependency the agent declares: the tool's image, with nothing
-/// beyond what the image needs, no arguments and no mount. The webhook
-/// is not in it, so every agent naming the same image declares the
-/// same tool.
-fn dependency(image: Image) -> Template {
-    Template { image, extra_memory: 0, extra_disk: 0, arguments: json!({}), fuse_file_mounts: Vec::new(), fuse_directory_mounts: Vec::new() }
+/// beyond what the image needs, no mount, and the account as its
+/// arguments. The webhook is not in it, so every agent naming the same
+/// image and the same account declares the same tool.
+fn dependency(image: Image, account: &str) -> Template {
+    Template { image, extra_memory: 0, extra_disk: 0, arguments: json!({ "account": account }), fuse_file_mounts: Vec::new(), fuse_directory_mounts: Vec::new() }
 }
 
 /// A dependency template's id, as the daemon names it: the lowercase
@@ -64,10 +64,11 @@ fn refused(kind: &str, error: &str) -> (StatusCode, Json<Value>) {
 /// `POST /register`. The rules:
 ///
 /// 1. Arguments that are not [`Arguments`], or that name an empty
-///    address or an empty key, are `400`.
+///    account, address or key, are `400`.
 /// 2. The agent's tool is the dependency tool of the template it
 ///    declares, owned by that template, since the tool's image is of
-///    scope `template`: one tool for every agent that declares it. It
+///    scope `template`: one tool for every agent that declares it
+///    with the same account. It
 ///    is kept by that name: the dependency template's id.
 /// 3. A second registration, whatever it carries, is `409`.
 /// 4. Otherwise `200`, declaring the one dependency and
@@ -75,11 +76,11 @@ fn refused(kind: &str, error: &str) -> (StatusCode, Json<Value>) {
 pub async fn register(Json(request): Json<register::request::Request>) -> Result<(StatusCode, Json<Response>), (StatusCode, Json<Value>)> {
     // Rule 1.
     let arguments = serde_json::from_value::<Arguments>(request.arguments).map_err(|error| refused("arguments", &error.to_string()))?;
-    if arguments.webhook_url.is_empty() || arguments.webhook_key.is_empty() {
-        return Err(refused("arguments", "`webhook_url` and `webhook_key` are both required, and neither is empty"));
+    if arguments.account.is_empty() || arguments.webhook_url.is_empty() || arguments.webhook_key.is_empty() {
+        return Err(refused("arguments", "`account`, `webhook_url` and `webhook_key` are all required, and none is empty"));
     }
     // Rule 2.
-    let template = dependency(arguments.tool);
+    let template = dependency(arguments.tool, &arguments.account);
     let id = id(&template).map_err(|error| refused("arguments", &error.to_string()))?;
     let tool = reference::Dependency { template: id, owner: reference::Owner::Template };
     // Rules 3 and 4.

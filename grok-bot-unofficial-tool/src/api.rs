@@ -5,8 +5,8 @@
 //! 1. `POST` [`PATH`] is an agent's. A request before the tool's
 //!    registration is `409`, `unregistered`. A request with no stamp,
 //!    or one stamped as a client or as a tool, is `403`, `forbidden`.
-//!    The tool is every agent's that declares it, so any agent's
-//!    request is taken.
+//!    The tool is every agent's that declares it with its account,
+//!    so any agent's request is taken.
 //! 2. The body is JSON, a [`Turn`]: the webhook of the routine the
 //!    turn is for, and the messages of the agent's run. The webhook
 //!    names which Bot is reached; the tool holds none of its own. An

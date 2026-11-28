@@ -6,12 +6,17 @@
   "schema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Arguments",
-    "description": "The arguments a Grok Bot agent is made with.\n\nThe agent is a thin wrapper: Grok Bot is reached from a tool\ncontainer of its own, the `grok-bot-unofficial-tool` image, which\nthe agent declares as its one dependency. The agent must be told\nwhich image that is, and names the webhook to it on every run:\nthe tool is shared by every agent that declares it, and holds no\nwebhook of its own. Every member\nis required, and any other member is refused, so a misspelled\nsetting is never silently ignored. The arguments are stored with\nthe agent's template and are not hidden: whoever can read the\ntemplate can read the key.",
+    "description": "The arguments a Grok Bot agent is made with.\n\nThe agent is a thin wrapper: Grok Bot is reached from a tool\ncontainer of its own, the `grok-bot-unofficial-tool` image, which\nthe agent declares as its one dependency. The agent must be told\nwhich image that is and which account it is for, and names the\nwebhook to it on every run. One tool is one Grok Bot account: every\nagent made with the same `tool` and `account` shares one container,\nand agents of another account have another. Every member\nis required, and any other member is refused, so a misspelled\nsetting is never silently ignored. The arguments are stored with\nthe agent's template and are not hidden: whoever can read the\ntemplate can read the key.",
     "type": "object",
     "properties": {
       "tool": {
         "description": "The `grok-bot-unofficial-tool` image the agent's tool is made\nfrom: its digest, and the references under which its bytes may\nbe fetched. For testing; a released agent image will name it\nitself.",
         "$ref": "#/$defs/Image"
+      },
+      "account": {
+        "description": "A name for the Grok Bot account the agent's Bot belongs to,\nchosen by whoever makes the agents: any text that is not empty.\nIt is a label and not a credential. Agents with the same\naccount share one tool; a different account is a different\ntool.",
+        "type": "string",
+        "minLength": 1
       },
       "webhook_url": {
         "description": "The address a routine's webhook is called at, shown as\n\"POST to\" in the Grok Bot app.",
@@ -27,6 +32,7 @@
     "additionalProperties": false,
     "required": [
       "tool",
+      "account",
       "webhook_url",
       "webhook_key"
     ],
@@ -93,9 +99,11 @@ The agent is a thin wrapper. Grok Bot is reached from a second
 container, the **`grok-bot-unofficial-tool`** tool, which this agent
 declares as its one dependency and reaches over the tool's API.
 
+- **One tool is one Grok Bot account.** Every agent made with the same
+  `tool` and `account` shares one tool container; agents of another
+  account have another. That matches the app, which signs in once.
 - **A run** posts its messages to the tool with the agent's webhook,
-  which says which Bot the run is for. The tool is shared by every
-  agent that declares it. It calls the webhook with the messages' text, and the events it answers with are
+  which says which Bot of the account the run is for. It calls the webhook with the messages' text, and the events it answers with are
   the agent's run.
 - **No reply out.** The webhook returns no answer. The run says in one
   line that the message was delivered, stays open for ten seconds, and
@@ -110,6 +118,7 @@ declares as its one dependency and reaches over the tool's API.
 ```json
 {
   "tool": { "digest": "sha256:…" },
+  "account": "<a name for the account>",
   "webhook_url": "<the address>",
   "webhook_key": "<the key>"
 }
@@ -118,6 +127,9 @@ declares as its one dependency and reaches over the tool's API.
 - **`tool`** is the `grok-bot-unofficial-tool` image, with its
   `references` where its bytes are to be fetched from a registry. It is
   an argument for testing.
+- **`account`** is a name you choose for the Grok Bot account the Bot
+  belongs to. It is a label and not a credential. Give every agent of
+  one account the same name, and each account a different one.
 - **`webhook_url`** and **`webhook_key`** are one routine's webhook, as
   the Grok Bot app shows them. The agent names them to its tool on
   every run.

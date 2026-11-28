@@ -9,9 +9,10 @@ use serde::{Deserialize, Serialize};
 /// The agent is a thin wrapper: Grok Bot is reached from a tool
 /// container of its own, the `grok-bot-unofficial-tool` image, which
 /// the agent declares as its one dependency. The agent must be told
-/// which image that is, and names the webhook to it on every run:
-/// the tool is shared by every agent that declares it, and holds no
-/// webhook of its own. Every member
+/// which image that is and which account it is for, and names the
+/// webhook to it on every run. One tool is one Grok Bot account: every
+/// agent made with the same `tool` and `account` shares one container,
+/// and agents of another account have another. Every member
 /// is required, and any other member is refused, so a misspelled
 /// setting is never silently ignored. The arguments are stored with
 /// the agent's template and are not hidden: whoever can read the
@@ -24,6 +25,13 @@ pub struct Arguments {
     /// be fetched. For testing; a released agent image will name it
     /// itself.
     pub tool: Image,
+    /// A name for the Grok Bot account the agent's Bot belongs to,
+    /// chosen by whoever makes the agents: any text that is not empty.
+    /// It is a label and not a credential. Agents with the same
+    /// account share one tool; a different account is a different
+    /// tool.
+    #[schemars(length(min = 1))]
+    pub account: String,
     /// The address a routine's webhook is called at, shown as
     /// "POST to" in the Grok Bot app.
     #[schemars(length(min = 1))]

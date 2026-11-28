@@ -2,7 +2,7 @@
 //! through the daemon, for each run.
 //!
 //! The tool is the agent's dependency tool, a container beside it and
-//! shared with every agent that declares it, where Grok Bot is
+//! shared with every agent of the same account, where Grok Bot is
 //! reached. The rules:
 //!
 //! 1. A turn is `POST` [`PATH`] with a JSON body: the webhook of the
