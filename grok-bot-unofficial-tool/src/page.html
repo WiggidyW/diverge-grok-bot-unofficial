@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Grok Bot</title>
 <style>
-  html, body { height: 100%; margin: 0; background: #16181c; color: #d8dbe0; font: 14px/1.4 system-ui, sans-serif; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: #16181c; color: #d8dbe0; font: 14px/1.4 system-ui, sans-serif; }
   #screen { position: fixed; inset: 0; }
   #note {
     position: fixed; left: 50%; top: 12px; transform: translateX(-50%);
@@ -44,8 +44,10 @@ function connect() {
   const url = new URL("vnc", location.href);
   url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
   rfb = new RFB(screen, url.href);
+  // The desktop is resized to the frame; where it cannot match it
+  // exactly, it is scaled to fit, never scrolled.
   rfb.resizeSession = true;
-  rfb.scaleViewport = false;
+  rfb.scaleViewport = true;
   rfb.addEventListener("connect", () => { connected = true; });
   rfb.addEventListener("disconnect", () => { connected = false; rfb = null; });
 }
