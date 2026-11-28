@@ -2,7 +2,9 @@
 Bot app sends and receives, one JSON object per line.
 
 Every line has `ts` (seconds since the epoch, with fractions), `flow`
-(an id joining the lines of one exchange) and `event`:
+(an id joining the lines of one exchange), `client` (the app's own
+port on the loopback, which tells one connection, and so one process,
+from another) and `event`:
 
 - `connect`: a tunnel the app asked for, by host and port. A host the
   proxy passes through unread shows this line and no other.
@@ -12,8 +14,10 @@ Every line has `ts` (seconds since the epoch, with fractions), `flow`
 - `response_end`: the body's total bytes, and the seconds it took.
 - `ws_message`: one WebSocket message, and which side sent it.
 - `error`: an exchange that failed, and why.
-- `tls_refused`: the app refused the proxy's certificate for a host,
-  which is what certificate pinning looks like.
+- `tls_refused`: the app ended a TLS handshake with the proxy. With
+  an `alert`, the app said why, which is how a certificate it does not
+  trust shows. With none, the app only closed the connection, which a
+  connection opened and then abandoned also does.
 
 A body is `{"text": …}` where it is valid UTF-8, and `{"base64": …}`
 otherwise. Nothing is redacted: the log holds the sign-in token and
@@ -41,6 +45,12 @@ def body(data):
         return {"base64": base64.b64encode(data).decode("ascii")}
 
 
+def port(connection):
+    """The app's port of a connection, where it is known."""
+    peer = getattr(connection, "peername", None)
+    return peer[1] if peer else None
+
+
 def headers(message):
     """Headers as pairs, in their order; a name may repeat."""
     return [[name, value] for name, value in message.headers.items(multi=True)]
@@ -53,20 +63,21 @@ class Traffic:
         self.file = open(os.path.join(DIRECTORY, name), "a", encoding="utf-8")
         self.lock = threading.Lock()
 
-    def write(self, flow, event, **fields):
-        line = json.dumps({"ts": time.time(), "flow": flow, "event": event, **fields}, ensure_ascii=False)
+    def write(self, flow, event, client=None, **fields):
+        line = json.dumps({"ts": time.time(), "flow": flow, "client": client, "event": event, **fields}, ensure_ascii=False)
         with self.lock:
             self.file.write(line + "\n")
             self.file.flush()
 
     def http_connect(self, flow):
-        self.write(flow.id, "connect", host=flow.request.host, port=flow.request.port)
+        self.write(flow.id, "connect", client=port(flow.client_conn), host=flow.request.host, port=flow.request.port)
 
     def request(self, flow):
         request = flow.request
         self.write(
             flow.id,
             "request",
+            client=port(flow.client_conn),
             method=request.method,
             url=request.pretty_url,
             http_version=request.http_version,
@@ -106,7 +117,12 @@ class Traffic:
 
     def tls_failed_client(self, data):
         connection = data.conn
-        self.write(None, "tls_refused", host=getattr(connection, "sni", None), error=str(getattr(connection, "error", None)))
+        error = str(getattr(connection, "error", None))
+        alert = None
+        if "alert" in error.lower():
+            alert = error
+        client = getattr(getattr(data, "context", None), "client", None)
+        self.write(None, "tls_refused", client=port(client), host=getattr(connection, "sni", None), alert=alert, error=error)
 
 
 addons = [Traffic()]

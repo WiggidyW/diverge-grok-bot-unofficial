@@ -14,8 +14,9 @@
 //! 2. The proxy ends TLS with a certificate authority it makes itself,
 //!    in the running container, on its first start: no private key is
 //!    in the image. The authority's certificate, [`CERTIFICATE`], is
-//!    added to the store the app's Chromium side reads, [`STORE`]; the
-//!    app's Node side is told of it by the app's wrapper.
+//!    added to the store the app's Chromium side reads, [`STORE`], and
+//!    to the system's, for any program the app starts that reads that;
+//!    the app's Node side is told of it by the app's wrapper.
 //! 3. The hosts of [`UNREAD`] are passed through and not read: the
 //!    vendor states that the link to the Bot's computer does not
 //!    survive being re-signed.
@@ -44,6 +45,9 @@ const ADDON: &str = "/usr/local/share/grok-bot-tool/traffic.py";
 
 /// The certificate store the app's Chromium side reads.
 const STORE: &str = "sql:/root/.pki/nssdb";
+
+/// Where the certificate is put for the system's store.
+const SYSTEM: &str = "/usr/local/share/ca-certificates/grok-bot-tool-traffic.crt";
 
 /// The hosts passed through unread (rule 3), as a pattern over
 /// `host:port`.
@@ -101,6 +105,12 @@ async fn start() -> Result<(), String> {
         .map_err(|error| format!("certutil could not be run: {error}"))?;
     if !added.status.success() {
         return Err(format!("the proxy's certificate could not be trusted: {}", String::from_utf8_lossy(&added.stderr)));
+    }
+    // The system's store too.
+    tokio::fs::copy(CERTIFICATE, SYSTEM).await.map_err(|error| format!("{SYSTEM} could not be written: {error}"))?;
+    let updated = Command::new("update-ca-certificates").stdin(Stdio::null()).output().await.map_err(|error| format!("update-ca-certificates could not be run: {error}"))?;
+    if !updated.status.success() {
+        return Err(format!("the system's certificates could not be updated: {}", String::from_utf8_lossy(&updated.stderr)));
     }
     Ok(())
 }
