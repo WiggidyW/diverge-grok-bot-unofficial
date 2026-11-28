@@ -57,9 +57,18 @@ RUN apt-get update \
         fonts-liberation \
         fonts-noto-color-emoji \
         novnc \
-        mitmproxy \
         libnss3-tools \
+        python3 \
+        python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+# The proxy that logs the app's traffic. Debian stable carries no
+# mitmproxy package, so it comes from PyPI, into an environment of its
+# own. Not pinned to one release yet; pin it when the image is first
+# published.
+RUN python3 -m venv /opt/mitmproxy \
+    && /opt/mitmproxy/bin/pip install --no-cache-dir "mitmproxy>=11,<13" \
+    && ln -s /opt/mitmproxy/bin/mitmdump /usr/local/bin/mitmdump
 
 # The browser's wrapper and launcher, and the desktop's menu.
 COPY --chmod=755 grok-bot-unofficial-tool/desktop/tool-browser /usr/local/bin/tool-browser
