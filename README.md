@@ -1,29 +1,41 @@
 # diverge-grok-bot-unofficial
 
 An unofficial [Diverge](https://github.com/divergenetwork/Diverge) agent
-container that hands its messages to your own Grok Bot.
+that hands its messages to your own Grok Bot, and the tool it does it
+through.
 
 This project is not made, endorsed or supported by the makers of Grok
-Bot. You need your own Grok Bot account, and its terms apply to you. The
-image does not contain the Grok Bot app.
+Bot. You need your own Grok Bot account, and its terms apply to you.
+Neither image contains the Grok Bot app.
+
+## The two images
+
+- **`grok-bot-unofficial-agent`** is the agent: a thin wrapper. It
+  declares the tool as its dependency and relays each run to it.
+- **`grok-bot-unofficial-tool`** is the agent's own tool, one for each
+  agent: where Grok Bot is reached. It serves the agent's turn on its
+  API, and will serve the frontend.
 
 ## Status
 
-Early and experimental.
+Early and experimental. Neither image has been built or run yet.
 
-- **Works:** a run sends its messages' text to a Bot through a routine's
-  webhook, which the agent's arguments name.
+- **Written:** a run posts its messages to the tool; the tool sends
+  their text to a Bot through a routine's webhook and streams the run's
+  chunks back, or refuses up front if the webhook could not be called.
 - **Does not exist yet:** reading the Bot's reply, files, a frontend.
 
-See [.diverge/DIVERGE.md](.diverge/DIVERGE.md) for what the image does
-and how to set it up.
+See each image's document for what it does and how to set it up:
+[the agent's](grok-bot-unofficial-agent/.diverge/DIVERGE.md) and
+[the tool's](grok-bot-unofficial-tool/.diverge/DIVERGE.md).
 
 ## Layout
 
-- `src/` is the program: an HTTP server the Diverge container proxy
-  calls (`/register`, `/run`, `/enqueue`).
-- `.diverge/DIVERGE.md` is the image's document.
-- `Containerfile` builds the image: `podman build -f Containerfile .`
+- `grok-bot-unofficial-agent/` and `grok-bot-unofficial-tool/` are the
+  two programs, members of one Cargo workspace, each with its
+  `Containerfile` and its `.diverge/DIVERGE.md`.
+- Each image builds from this repository's root:
+  `podman build -f grok-bot-unofficial-tool/Containerfile .`
 - `reports/` holds the research: what Grok Bot offers, what its terms
   say, and how the pieces might fit.
 

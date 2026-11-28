@@ -81,6 +81,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.92"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "82f6aeea286b8eb4dd3431a1be1b59d290ace00f5bfd8e2a159bc2a05e2c1667"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.10",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -514,25 +525,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "diverge-grok-bot-unofficial"
-version = "0.1.0"
-dependencies = [
- "async-stream",
- "axum",
- "diverge-sdk",
- "futures-util",
- "reqwest",
- "rmcp",
- "schemars",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "diverge-sdk"
 version = "1.0.0"
-source = "git+https://github.com/divergenetwork/Diverge?rev=bc3b52f46#bc3b52f46279099e77851d4f692dd05a15c8f495"
+source = "git+https://github.com/divergenetwork/Diverge?rev=e606d7a9f#e606d7a9f0c40a50cae8277ea0779db2bec641f7"
 dependencies = [
  "aes-gcm",
  "axum",
@@ -864,6 +859,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "grok-bot-unofficial-agent"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "axum",
+ "diverge-sdk",
+ "futures-util",
+ "hex",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
+name = "grok-bot-unofficial-tool"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "axum",
+ "diverge-sdk",
+ "futures-util",
+ "reqwest",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "group"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -898,6 +925,12 @@ name = "hashbrown"
 version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "735eaa21a6a5ffb2e84362faaeb90c05ba8e19797ca30428478cb6ea3a4921bc"
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hkdf"
@@ -1382,6 +1415,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "pastey"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
+
+[[package]]
 name = "pem-rfc7468"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1774,15 +1813,20 @@ version = "3.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "391f153431ab68664d946513ea0cb3edbca78eaf99c5a983036cacab6220d85b"
 dependencies = [
+ "async-trait",
  "base64 0.23.1",
  "bytes",
  "chrono",
  "futures",
  "http",
+ "http-body",
+ "http-body-util",
  "indexmap",
  "libc",
+ "pastey",
  "percent-encoding",
  "pin-project-lite",
+ "rand 0.10.4",
  "reqwest",
  "schemars",
  "serde",
@@ -1793,9 +1837,11 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "tower-service",
  "tracing",
  "unicode-general-category",
  "unicode-normalization",
+ "uuid",
 ]
 
 [[package]]
@@ -2646,6 +2692,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c14b15dffa2f4bd712103e857140aa04a4f2ff6e955c77d7eb8e53ee02a3b64"
 dependencies = [
  "getrandom 0.4.3",
+ "js-sys",
+ "wasm-bindgen",
 ]
 
 [[package]]

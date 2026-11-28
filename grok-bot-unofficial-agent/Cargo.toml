@@ -1,0 +1,35 @@
+[package]
+name = "grok-bot-unofficial-agent"
+description = "An unofficial Diverge agent container: a thin wrapper over its own Grok Bot tool"
+publish = false
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "grok-bot-unofficial-agent"
+path = "src/main.rs"
+
+[dependencies]
+# The container's contract with the proxy beside it (registration, the
+# run, the queue, the daemon connection) and the daemon's API request
+# the agent reaches its tool by.
+diverge-sdk = { workspace = true }
+# The run as a generator of events.
+async-stream = { workspace = true }
+# The program's door: an HTTP server on the loopback the proxy dials.
+axum = { workspace = true }
+# The tool's answer, as a stream.
+futures-util = { workspace = true }
+# `--schema` states the arguments'.
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# The id of the dependency the agent declares, as the daemon names
+# it: the SHA-256 of the template's canonical bytes, in hexadecimal.
+# The same versions the daemon hashes with.
+sha2 = { version = "=0.11.1" }
+hex = { version = "0.4.3" }
+tokio = { version = "1.54.1", default-features = false, features = ["macros", "net", "rt-multi-thread", "sync"] }

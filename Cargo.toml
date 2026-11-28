@@ -1,38 +1,22 @@
-[package]
-name = "diverge-grok-bot-unofficial"
+# The two halves of the unofficial Grok Bot agent: the agent image, a
+# thin wrapper, and its dependency tool, where Grok Bot is reached.
+[workspace]
+resolver = "3"
+members = ["grok-bot-unofficial-agent", "grok-bot-unofficial-tool"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 authors = ["Ronald Lewis Riggles III"]
-description = "An unofficial Diverge agent container that hands its messages to a Grok Bot"
 license = "MIT"
 repository = "https://github.com/WiggidyW/diverge-grok-bot-unofficial"
-publish = false
 
-[[bin]]
-name = "diverge-grok-bot-unofficial"
-path = "src/main.rs"
-
-[dependencies]
-# The SDK, from GitHub and not from a registry, pinned to one commit:
-# the container's contract with the proxy beside it (registration,
-# secrets, the run, the queue) and the chunks a run is made of.
-diverge-sdk = { git = "https://github.com/divergenetwork/Diverge", rev = "bc3b52f46" }
-# The run as a generator of events.
+[workspace.dependencies]
+# The SDK, from GitHub and not from a registry, pinned to one commit.
+diverge-sdk = { git = "https://github.com/divergenetwork/Diverge", rev = "e606d7a9f" }
 async-stream = { version = "0.3.6" }
-# The program's door: an HTTP server on the loopback the proxy dials.
 axum = { version = "0.8.9" }
-# The Stream trait the generator implements.
-futures-util = { version = "0.3.34", default-features = false }
-# The webhook call, the release feed and the installer's download. The
-# same line and TLS stack the SDK rides.
-reqwest = { version = "0.13", default-features = false, features = ["http2", "rustls", "json", "stream"] }
-# The content blocks a message is made of; model types only.
-rmcp = { version = "3.11.0", default-features = false }
-# `--schema` states the arguments'.
+futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 schemars = { version = "1.2.3" }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
-# `fs` and `io-util` for the installer's file, `process` for apt,
-# `net` and `rt-multi-thread` for the server, `sync` for what is held,
-# `time` for the run's linger.
-tokio = { version = "1.54.1", default-features = false, features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }

@@ -1,0 +1,39 @@
+[package]
+name = "grok-bot-unofficial-tool"
+description = "An unofficial Diverge dependency tool that reaches a Grok Bot for the agent it is deployed for"
+publish = false
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "grok-bot-unofficial-tool"
+path = "src/main.rs"
+
+[dependencies]
+# The container's contract with the proxy beside it (registration),
+# the chunks a turn is made of, and the caller the daemon stamps on
+# every API request.
+diverge-sdk = { workspace = true }
+# The turn as a generator of events.
+async-stream = { workspace = true }
+# The program's door: `/register`, the MCP server at `/mcp`, and the
+# agent's turn beneath `/api`.
+axum = { workspace = true }
+futures-util = { workspace = true }
+# The webhook call, the release feed and the installer's download. The
+# same line and TLS stack the SDK rides.
+reqwest = { version = "0.13", default-features = false, features = ["http2", "rustls", "json", "stream"] }
+# The MCP server, which serves no tool, and the content blocks a
+# message is made of.
+rmcp = { version = "3.11.0", default-features = false, features = ["server", "transport-streamable-http-server"] }
+# `--schema` states the arguments'.
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# `fs` and `io-util` for the installer's file, `process` for apt,
+# `net` and `rt-multi-thread` for the server, `sync` for what is held,
+# `time` for the turn's linger.
+tokio = { version = "1.54.1", default-features = false, features = ["fs", "io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }

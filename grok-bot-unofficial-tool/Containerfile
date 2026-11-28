@@ -1,4 +1,4 @@
-# The unofficial Grok Bot agent image: the program alone.
+# The unofficial Grok Bot tool image: the program alone.
 #
 # The container proxy is NOT in this image. The host injects it at
 # runtime, and it may not be up at all until a request comes.
@@ -9,12 +9,13 @@
 # with apt, so a starting container needs the vendor's download hosts
 # and the Debian mirrors reachable, and runs as root.
 #
-# Build from this repository's root:
+# Build from this repository's ROOT, since the crate is a member of its
+# workspace:
 #
-#     podman build -f Containerfile .
+#     podman build -f grok-bot-unofficial-tool/Containerfile .
 #
-# The Diverge SDK comes from GitHub at the commit Cargo.toml pins, so
-# the build needs github.com reachable and nothing else beside this
+# The Diverge SDK comes from GitHub at the commit the workspace pins,
+# so the build needs github.com reachable and nothing else beside this
 # repository.
 
 # The same Rust image, by the same digest, as the Diverge agent images.
@@ -22,10 +23,13 @@ FROM docker.io/library/rust:1.98.0@sha256:271849e998ffce5776454bbf98c5dc21baafc8
 
 WORKDIR /build
 
+# The whole workspace: its manifest names both members, so both are
+# there, and only this one is built.
 COPY Cargo.toml Cargo.lock ./
-COPY src src
+COPY grok-bot-unofficial-agent grok-bot-unofficial-agent
+COPY grok-bot-unofficial-tool grok-bot-unofficial-tool
 
-RUN cargo build --release --locked
+RUN cargo build --release --locked -p grok-bot-unofficial-tool
 
 # Debian stable. Not pinned by digest yet; pin it when the image is
 # first published.
@@ -39,13 +43,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build /build/target/release/diverge-grok-bot-unofficial /usr/local/bin/diverge-grok-bot-unofficial
+COPY --from=build /build/target/release/grok-bot-unofficial-tool /usr/local/bin/grok-bot-unofficial-tool
 
 # The image's arguments schema and its description, read by the proxy.
-COPY .diverge /.diverge
+COPY grok-bot-unofficial-tool/.diverge /.diverge
 
 # The program's own server, on the loopback: 8080, or whatever `PORT`
 # names. Nothing is exposed: the proxy the host injects is the only
 # thing that dials it, and it is beside it.
 
-ENTRYPOINT ["/usr/local/bin/diverge-grok-bot-unofficial"]
+ENTRYPOINT ["/usr/local/bin/grok-bot-unofficial-tool"]

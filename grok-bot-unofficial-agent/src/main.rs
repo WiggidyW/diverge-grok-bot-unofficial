@@ -1,30 +1,34 @@
-//! An unofficial Diverge agent container that hands its messages to a
-//! Grok Bot.
+//! `grok-bot-unofficial-agent`, as an agent container: a thin wrapper
+//! over a Grok Bot.
+//!
+//! Grok Bot is not here. It is reached from a tool container of the
+//! agent's own, the `grok-bot-unofficial-tool` image, which the agent
+//! declares as its one dependency and reaches over the daemon, through
+//! the tool's API.
+//!
+//! A run comes in as any agent's does: the proxy posts the messages to
+//! `/run`. The agent posts them to its tool, and the events the tool
+//! answers with are the run's.
 //!
 //! The program is an HTTP server on the container's loopback, at the
 //! port [`diverge_sdk::container_proxy::inside::port()`] names, and the
-//! proxy beside it is its only caller: `POST /register` once, and
-//! `POST /run` and `POST /enqueue`. `--schema`, the program's one
-//! argument, prints the JSON Schema of the arguments it takes, which is
-//! the `schema` of the image's `/.diverge/DIVERGE.md` frontmatter.
+//! proxy beside it is its only caller: `POST /register` once
+//! ([`register`]), and `POST /run` and `POST /enqueue` ([`run`]). What
+//! it asks of its tool goes out through the same proxy, on its daemon
+//! connection ([`tool`]). `--schema`, the program's one argument,
+//! prints the JSON Schema of the arguments it takes, which is the
+//! `schema` of the image's `/.diverge/DIVERGE.md` frontmatter.
 //!
-//! # What it does today
+//! # Nothing of the proxy's before it is needed
 //!
-//! A run hands its messages' text to the Bot through one routine's
-//! webhook, the one way in the vendor documents, named by the
-//! arguments. The webhook returns
-//! no reply, so the run carries none: see [`run`].
-//!
-//! # The app
-//!
-//! The Grok Bot desktop app is fetched from the vendor at startup and
-//! is not in the image: see [`install`]. Nothing uses it yet.
+//! The host injects the proxy at runtime, and it may not be up until a
+//! request comes. So nothing here touches it at registration: the
+//! daemon is reached on the first run, and kept.
 
 mod arguments;
-mod install;
 mod register;
 mod run;
-mod webhook;
+mod tool;
 
 use std::io::Write as _;
 
@@ -41,7 +45,7 @@ fn main() {
         (None, None) => {}
         (Some(argument), None) if argument == "--schema" => return schema(),
         _ => {
-            let _ = writeln!(std::io::stderr(), "usage: diverge-grok-bot-unofficial [--schema]");
+            let _ = writeln!(std::io::stderr(), "usage: grok-bot-unofficial-agent [--schema]");
             std::process::exit(2);
         }
     }
@@ -65,16 +69,8 @@ fn schema() {
     }
 }
 
-/// The server, for the container's life, bound on the loopback. The
-/// install starts beside it and is waited on by nothing; its outcome
-/// goes to stderr, which is the container's log.
+/// The server, for the container's life, bound on the loopback.
 async fn serve() {
-    tokio::spawn(async {
-        match install::installed().await {
-            Ok(version) => eprintln!("Grok Bot {version} is installed"),
-            Err(why) => eprintln!("Grok Bot was not installed: {why}"),
-        }
-    });
     let app = axum::Router::new()
         .route("/register", axum::routing::post(register::register))
         .route("/run", axum::routing::post(run::run))
